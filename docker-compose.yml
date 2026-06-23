@@ -1,0 +1,45 @@
+version: '3.8'
+
+services:
+  # 1. บริการ API หลังบ้านของเรา
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080" 
+    # ดึงค่าทุกอย่างจากไฟล์ .env ในเครื่องโดยตรง
+    env_file:
+      - .env
+    environment:
+      - REDIS_HOST=redis_cache:6379
+      - GODEBUG=netdns=go
+      - GO_NET_PREFER_IPV4=1
+      - GOOGLE_APPLICATION_CREDENTIALS=/app/google-credentials.json
+    volumes:
+      - ./google-credentials.json:/app/google-credentials.json
+    depends_on:
+      redis_cache:
+        condition: service_healthy
+    networks:
+      - cashlog_network
+
+  # 2. บริการอินเมมโมรี่แคช Redis
+  redis_cache:
+    image: redis:7-alpine
+    container_name: redis_cache
+    ports:
+      - "6379:6379" # การแมปพอร์ตแบบ "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - cashlog_network
+
+
+  # 🌟 สร้าง Network กลางให้ทั้งคู่คุยกัน
+networks:
+  cashlog_network:
+    driver: bridge

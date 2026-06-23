@@ -1,0 +1,30 @@
+# 🚨 1. Credentials & Secrets
+.env
+.env.*
+!.env.example
+*.pem
+google-credentials.json
+
+# 🛠️ 2. Go Binaries & Executables
+/cashlog-backend
+/bin/
+/dist/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+
+# 🐳 3. Docker Volumes & Temporary Files
+.docker_volumes/
+composite.compiled.yaml
+
+# 💻 4. OS & IDE Settings
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.suo
+*.swp
