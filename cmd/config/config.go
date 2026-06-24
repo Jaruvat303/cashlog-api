@@ -22,6 +22,7 @@ type Config struct {
 
 	// Redis Configs
 	RedisHost     string
+	RedisUsename  string
 	RedisPassword string
 	RedisDB       int
 
@@ -43,8 +44,9 @@ func LoadConfig() *Config {
 		DBMaxIdleConns:    getEnvAsInt("DB_MAX_IDEL_CONNS", 10),
 		DBMaxOpenConns:    getEnvAsInt("DB_MAX_OPEN_CONNS", 100),
 		DBConnMaxLifetime: getEnvAsDuration("DB_CONN_MAX_LIFETIME", 30*time.Minute),
-		RedisHost:         getEnv("REDIS_HOST", "localhost:6379"),
+		RedisHost:         getEnv("REDIS_HOST", "localhost"),
 		RedisPassword:     getEnv("REDIS_PASSWORD", ""),
+		RedisUsename:      getEnv("REDIS_USERNAME", "default"),
 		RedisDB:           getEnvAsInt("REDIS_DB", 0),
 		GCProjectID:       getEnv("GOOGLE_CLOUD_PROJECT", ""),
 	}

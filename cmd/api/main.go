@@ -30,7 +30,7 @@ func main() {
 
 	// Connect database
 	db := database.InitPostgresDB(ctx, cfg)
-	rdb := database.InitRedisDB(cfg)
+	rdb := database.InitRedisDB(ctx, cfg)
 
 	// Dependency Injection
 	txRepository := postgres.NewGormTransactionRepository(db, appLogger)
