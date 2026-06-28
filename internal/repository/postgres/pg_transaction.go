@@ -88,7 +88,7 @@ func (g *gormTransactionRepository) CalculateSummary(ctx context.Context, startD
 			summary.TotalIncome += res.TotalAmount
 			summary.Income = append(summary.Income, breakdown)
 		} else {
-			summary.TotalExpence += res.TotalAmount
+			summary.TotalExpense += res.TotalAmount
 			summary.Expense = append(summary.Expense, breakdown)
 		}
 	}
