@@ -53,7 +53,7 @@ func (g *gormTransactionRepository) CalculateSummary(ctx context.Context, startD
 	}
 
 	type QueryResult struct {
-		CategoryID      int64
+		CategoryID      *int64
 		CategoryName    string
 		IconURL         *string
 		TransactionType *string
@@ -62,11 +62,19 @@ func (g *gormTransactionRepository) CalculateSummary(ctx context.Context, startD
 
 	var result []QueryResult
 
+	// ถ้าไม่มี Icon Url ให้ใช้ค่าเริ่มต้น
+	defaultIcon := "folder"
 	// Query เดียวที่ดึงข้อมูลสรุปตามหมวดหมู่ในช่วงเวลาที่กำหนด
 	err := g.db.WithContext(ctx).
 		Table("transactions").
-		Select("transactions.category_id,category_name as category_name, category_icon_url,transactions.transaction_type,SUM(transactions.amount)as total_amount").
-		Joins("JOIN categories ON transactions.category_id = categories.id").
+		Select(`
+		transactions.category_id,
+		COALESCE(categories.name, 'Uncategorized') as category_name, 
+        COALESCE(categories.icon_url, ?) as icon_url,
+		transactions.transaction_type,
+		SUM(transactions.amount)as total_amount
+		`, defaultIcon).
+		Joins("LEFT JOIN categories ON transactions.category_id = categories.id").
 		Where("transactions.transaction_date BETWEEN ? AND ?", startDate, endDate).
 		Group("transactions.category_id,categories.name,categories.icon_url,transactions.transaction_type").
 		Scan(&result).Error
@@ -76,8 +84,14 @@ func (g *gormTransactionRepository) CalculateSummary(ctx context.Context, startD
 	}
 
 	for _, res := range result {
+		// กรณี CategoryID เป็น Null ให้เป็นค่าเริ่มต้น
+		var catID int64
+		if res.CategoryID != nil {
+			catID = *res.CategoryID
+		}
+
 		breakdown := domain.CategoryBreakdown{
-			CategoryID:   res.CategoryID,
+			CategoryID:   catID,
 			CategoryName: res.CategoryName,
 			IconURl:      res.IconURL,
 			TotalAmount:  res.TotalAmount,
@@ -88,7 +102,7 @@ func (g *gormTransactionRepository) CalculateSummary(ctx context.Context, startD
 			summary.TotalIncome += res.TotalAmount
 			summary.Income = append(summary.Income, breakdown)
 		} else {
-			summary.TotalExpence += res.TotalAmount
+			summary.TotalExpense += res.TotalAmount
 			summary.Expense = append(summary.Expense, breakdown)
 		}
 	}

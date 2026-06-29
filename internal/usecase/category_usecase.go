@@ -18,7 +18,7 @@ func (c *categoryUsecase) CreateCategory(ctx context.Context, input dto.CreateCa
 	cat := &domain.Category{
 		Name:    input.Name,
 		Type:    input.Type,
-		IconURl: input.IconURL,
+		IconURL: input.IconURL,
 	}
 
 	if err := c.categoryRepo.Create(ctx, cat); err != nil {
@@ -62,7 +62,7 @@ func (c *categoryUsecase) UpdateCategory(ctx context.Context, id uint, input dto
 	}
 
 	if input.IconURL != nil {
-		cat.IconURl = input.IconURL
+		cat.IconURL = input.IconURL
 	}
 
 	// สั่ง Update category จากฐานข้อมูล
