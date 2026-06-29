@@ -23,7 +23,7 @@ func TestCreateCategory(t *testing.T) {
 	mockCat := &domain.Category{
 		Name:    mockInput.Name,
 		Type:    mockInput.Type,
-		IconURl: mockInput.IconURL,
+		IconURL: mockInput.IconURL,
 	}
 
 	tests := []struct {
@@ -85,14 +85,14 @@ func TestUpdateCategory(t *testing.T) {
 		ID:      1,
 		Name:    "food",
 		Type:    "expense",
-		IconURl: pkg.PTR("www.picture.com"),
+		IconURL: pkg.PTR("www.picture.com"),
 	}
 
 	mockResult := &domain.Category{
 		ID:      1,
 		Name:    *mockInput.Name,
 		Type:    mockCategpry.Type,
-		IconURl: mockInput.IconURL,
+		IconURL: mockInput.IconURL,
 	}
 
 	tests := []struct {

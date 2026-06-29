@@ -11,7 +11,7 @@ type Category struct {
 	ID        int64     `gorm:"primaryKey;autoIncrement"`
 	Name      string    `gorm:"type:varchar(100);not null;uniqueIndex"`
 	Type      string    `gorm:"type:varchar(100);not null;index"`
-	IconURl   *string   `gorm:"type:varchar(255);"`
+	IconURL   *string   `gorm:"type:varchar(255);column:icon_url"`
 	CreatedAt time.Time `gorm:"autoCreateTime;not null"`
 	UpdateAt  time.Time `gorm:"autoUpdateTime:not null"`
 	Delete    time.Time `gorm:"index"`
