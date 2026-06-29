@@ -24,7 +24,7 @@ func TestDashboardSummary(t *testing.T) {
 	// ข้อมูลจำลองสำหรับตรวจเช็ต Response Body
 	mockSummary := &domain.DashboardSummary{
 		TotalIncome:  15000.0,
-		TotalExpense: 5000.0,
+		TotalExpence: 5000.0,
 		Scope:        "monthly",
 		Year:         2026,
 		Month:        6,

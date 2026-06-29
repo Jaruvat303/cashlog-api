@@ -110,7 +110,7 @@ func TestGetDashboardSummary(t *testing.T) {
 	// จำลองข่อมูลที่จะส่งกลับมาจาก Cache หรือ DB
 	mockSummary := &domain.DashboardSummary{
 		TotalIncome:  15000.0,
-		TotalExpense: 5000.0,
+		TotalExpence: 5000.0,
 		Scope:        "monthly",
 		Month:        6,
 		Year:         2026,
@@ -182,7 +182,7 @@ func TestGetDashboardSummary(t *testing.T) {
 
 				yearlySummary := &domain.DashboardSummary{
 					TotalIncome:  150000.0,
-					TotalExpense: 40000.0,
+					TotalExpence: 40000.0,
 					Scope:        "yearly",
 					Year:         2026,
 				}
@@ -193,7 +193,7 @@ func TestGetDashboardSummary(t *testing.T) {
 			},
 			expectedResult: &domain.DashboardSummary{
 				TotalIncome:  150000.0,
-				TotalExpense: 40000.0,
+				TotalExpence: 40000.0,
 				Scope:        "yearly",
 				Year:         2026,
 			},
@@ -249,7 +249,7 @@ func TestGetDashboardSummary(t *testing.T) {
 				assert.NotNil(t, result)
 				assert.Equal(t, tt.expectedResult.Scope, result.Scope)
 				assert.Equal(t, tt.expectedResult.TotalIncome, result.TotalIncome)
-				assert.Equal(t, tt.expectedResult.TotalExpense, result.TotalExpense)
+				assert.Equal(t, tt.expectedResult.TotalExpence, result.TotalExpence)
 			}
 
 			mockRepo.AssertExpectations(t)
