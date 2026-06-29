@@ -3,7 +3,7 @@ package domain
 // DashboardSummary โตรงสร้างข้อมูลสรุปผลรายรับรายจ่าน
 type DashboardSummary struct {
 	TotalIncome  float64             `json:"total_income"`
-	TotalExpense float64             `json:"total_expense"`
+	TotalExpence float64             `json:"total_expense"`
 	Scope        string              `json:"scope"`
 	Month        int                 `json:"month"`
 	Year         int                 `json:"year"`

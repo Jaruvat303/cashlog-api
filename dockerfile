@@ -33,6 +33,9 @@ WORKDIR /app
 # คัดลอกเฉพาะไฟล์ Binary ที่คอมไพล์เสร็จแล้วมาจาก Stage 1
 COPY --from=builder /app/cashlog-api .
 
+# คัดลอกไฟล์ .env สำหรับการเทส Local
+COPY .env .
+
 # เปิดพอร์ตที่ Go Fiber ใช้
 EXPOSE 8080
 
