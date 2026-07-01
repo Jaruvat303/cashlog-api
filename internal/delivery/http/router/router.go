@@ -18,7 +18,7 @@ func SetupRoutes(app *fiber.App, txHandler *handler.TransactionHandler, catHandl
 
 	cat := v1.Group("/categories")
 	cat.Post("/", catHandler.CreateCategory)
-	cat.Get("/", catHandler.FetchCategories)
+	cat.Get("/", catHandler.FetchCategoriesByType)
 	cat.Patch("/:id", catHandler.UpdateCategory)
 	cat.Delete("/:id", catHandler.DeleteCategory)
 

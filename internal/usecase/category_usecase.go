@@ -18,7 +18,6 @@ func (c *categoryUsecase) CreateCategory(ctx context.Context, input dto.CreateCa
 	cat := &domain.Category{
 		Name:    input.Name,
 		Type:    input.Type,
-		IconURL: input.IconURL,
 	}
 
 	if err := c.categoryRepo.Create(ctx, cat); err != nil {
@@ -45,8 +44,8 @@ func (c *categoryUsecase) DeleteCategory(ctx context.Context, id uint) error {
 }
 
 // FetchCategories implements [domain.CategoryUsecase].
-func (c *categoryUsecase) FetchCategories(ctx context.Context) ([]domain.Category, error) {
-	return c.categoryRepo.GetAll(ctx)
+func (c *categoryUsecase) FetchCategoriesByType(ctx context.Context,types string) ([]domain.Category, error) {
+	return c.categoryRepo.GetByType(ctx,types)
 }
 
 // UpdateCategory implements [domain.CategoryUsecase].
@@ -61,9 +60,6 @@ func (c *categoryUsecase) UpdateCategory(ctx context.Context, id uint, input dto
 		cat.Name = *input.Name
 	}
 
-	if input.IconURL != nil {
-		cat.IconURL = input.IconURL
-	}
 
 	// สั่ง Update category จากฐานข้อมูล
 	if err := c.categoryRepo.Update(ctx, cat, id); err != nil {

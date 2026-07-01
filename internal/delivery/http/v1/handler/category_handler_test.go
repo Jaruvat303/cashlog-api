@@ -228,27 +228,39 @@ func TestDeleteCategoryHandler(t *testing.T) {
 	}
 }
 
-func TestFetchCategoriesHandler(t *testing.T) {
-	mockList := []domain.Category{{ID: 1, Name: "Food"}}
+func TestFetchCategoriesByTypeHandler(t *testing.T) {
+	mockList := []domain.Category{{ID: 1, Name: "Food", Type: "expense"}}
 
 	tests := []struct {
 		name           string
+		url            string
 		setupMock      func(uc *domain.CategoryUsecaseMock)
 		expectedStatus int
 		expectedBody   string
 	}{
 		{
 			name: "Success - ดึงข้อมูลรายการสำเร็จ",
+			url:  "/categories?type=expense",
 			setupMock: func(uc *domain.CategoryUsecaseMock) {
-				uc.On("FetchCategories", mock.Anything).Return(mockList, nil)
+				uc.On("FetchCategoriesByType", mock.Anything, "expense").Return(mockList, nil)
 			},
 			expectedStatus: fiber.StatusOK,
 			expectedBody:   `"success":true`,
 		},
 		{
-			name: "Internal Error - Usecase ดึงข้อมูลจากฐานข้อมูลไม่ได้",
+			name: "Bad Request - Query Parameter ไม่ถูกต้อง",
+			url: "/categories?type=wrongType",
 			setupMock: func(uc *domain.CategoryUsecaseMock) {
-				uc.On("FetchCategories", mock.Anything).Return(nil, errors.New("query error"))
+				// usecase จะไม่ทำงาน
+			},
+			expectedStatus: fiber.StatusBadRequest,
+			expectedBody: "invalid types parameter",
+		},
+		{
+			name: "Internal Error - Usecase ดึงข้อมูลจากฐานข้อมูลไม่ได้",
+			url:  "/categories?type=expense",
+			setupMock: func(uc *domain.CategoryUsecaseMock) {
+				uc.On("FetchCategoriesByType", mock.Anything, "expense").Return(nil, errors.New("query error"))
 			},
 			expectedStatus: fiber.StatusInternalServerError,
 			expectedBody:   "query error",
@@ -263,9 +275,9 @@ func TestFetchCategoriesHandler(t *testing.T) {
 			tt.setupMock(mockUC)
 
 			h := handler.NewCategoryHandler(mockUC, mockLog)
-			app.Get("/categories", h.FetchCategories)
+			app.Get("/categories", h.FetchCategoriesByType)
 
-			req := httptest.NewRequest(http.MethodGet, "/categories", nil)
+			req := httptest.NewRequest(http.MethodGet, tt.url, nil)
 			resp, _ := app.Test(req)
 
 			assert.Equal(t, tt.expectedStatus, resp.StatusCode)

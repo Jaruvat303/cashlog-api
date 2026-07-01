@@ -32,9 +32,9 @@ func (c *categoryRepository) Delete(ctx context.Context, id uint) error {
 }
 
 // GetAll implements [domain.CategoryRepo].
-func (c *categoryRepository) GetAll(ctx context.Context) ([]domain.Category, error) {
+func (c *categoryRepository) GetByType(ctx context.Context, types string) ([]domain.Category, error) {
 	var categories []domain.Category
-	result := c.db.WithContext(ctx).Order("id asc").Find(&categories)
+	result := c.db.WithContext(ctx).Where("type = ?", types).Order("id asc").Find(&categories)
 	if result.Error != nil {
 		return nil, HandlerDBError(ctx, result.Error, c.log)
 	}

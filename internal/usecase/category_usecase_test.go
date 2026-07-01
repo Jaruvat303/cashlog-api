@@ -15,15 +15,13 @@ import (
 
 func TestCreateCategory(t *testing.T) {
 	mockInput := dto.CreateCategoryInput{
-		Name:    "food",
-		Type:    "expense",
-		IconURL: pkg.PTR("www.picture.com"),
+		Name: "food",
+		Type: "expense",
 	}
 
 	mockCat := &domain.Category{
-		Name:    mockInput.Name,
-		Type:    mockInput.Type,
-		IconURL: mockInput.IconURL,
+		Name: mockInput.Name,
+		Type: mockInput.Type,
 	}
 
 	tests := []struct {
@@ -77,22 +75,19 @@ func TestCreateCategory(t *testing.T) {
 
 func TestUpdateCategory(t *testing.T) {
 	mockInput := dto.UpdateCategoryInput{
-		Name:    pkg.PTR("update food"),
-		IconURL: pkg.PTR("www.update.com"),
+		Name: pkg.PTR("update food"),
 	}
 
 	mockCategpry := &domain.Category{
-		ID:      1,
-		Name:    "food",
-		Type:    "expense",
-		IconURL: pkg.PTR("www.picture.com"),
+		ID:   1,
+		Name: "food",
+		Type: "expense",
 	}
 
 	mockResult := &domain.Category{
-		ID:      1,
-		Name:    *mockInput.Name,
-		Type:    mockCategpry.Type,
-		IconURL: mockInput.IconURL,
+		ID:   1,
+		Name: *mockInput.Name,
+		Type: mockCategpry.Type,
 	}
 
 	tests := []struct {
@@ -166,29 +161,32 @@ func TestUpdateCategory(t *testing.T) {
 	}
 }
 
-func TestGetAllCategory(t *testing.T) {
+func TestFetchCategoriesByType(t *testing.T) {
 	mockCategories := []domain.Category{
-		{ID: 1, Name: "food"}, {ID: 2, Name: "healty"},
+		{ID: 1, Name: "food"}, {ID: 2, Name: "healty", Type: "expense"},
 	}
 
 	tests := []struct {
 		name           string
+		types          string
 		setupMock      func(repo *domain.CategoryRepositoryMock)
 		expectedResult []domain.Category
 		expectedError  bool
 	}{
 		{
-			name: "1. Success - Get All Categories",
+			name:  "1. Success - Get All Categories",
+			types: "expense",
 			setupMock: func(repo *domain.CategoryRepositoryMock) {
-				repo.On("GetAll", mock.Anything).Return(mockCategories, nil)
+				repo.On("GetByType", mock.Anything, "expense").Return(mockCategories, nil)
 			},
 			expectedResult: mockCategories,
 			expectedError:  false,
 		},
 		{
-			name: "2. DB Error - Cannot Get All Categories",
+			name:  "2. DB Error - Cannot Get All Categories",
+			types: "expense",
 			setupMock: func(repo *domain.CategoryRepositoryMock) {
-				repo.On("GetAll", mock.Anything).Return(nil, domain.ErrInternalDB)
+				repo.On("GetByType", mock.Anything, "expense").Return(nil, domain.ErrInternalDB)
 			},
 			expectedResult: nil,
 			expectedError:  true,
@@ -208,7 +206,7 @@ func TestGetAllCategory(t *testing.T) {
 			uc := usecase.NewCategoryUsecase(mockRepo, mockLog)
 
 			// Act
-			result, err := uc.FetchCategories(ctx)
+			result, err := uc.FetchCategoriesByType(ctx, tt.types)
 
 			// Assart
 			if tt.expectedError {
