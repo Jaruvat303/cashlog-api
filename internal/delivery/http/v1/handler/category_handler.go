@@ -102,11 +102,16 @@ func (h *CategoryHandler) DeleteCategory(c *fiber.Ctx) error {
 
 }
 
-func (h *CategoryHandler) FetchCategories(c *fiber.Ctx) error {
+func (h *CategoryHandler) FetchCategoriesByType(c *fiber.Ctx) error {
 	ctx := c.UserContext()
 
+	types := c.Query("type", "expense")
+	if types != "expense" && types != "income" {
+		return fiber.NewError(fiber.StatusBadRequest, "invalid types parameter")
+	}
+
 	// เรียกใช้งาน Usecase
-	categories, err := h.usecase.FetchCategories(ctx)
+	categories, err := h.usecase.FetchCategoriesByType(ctx, types)
 	if err != nil {
 		return err
 	}

@@ -22,8 +22,8 @@ func (m *CategoryRepositoryMock) Update(ctx context.Context, updateCat *Category
 	return args.Error(0)
 }
 
-func (m *CategoryRepositoryMock) GetAll(ctx context.Context) ([]Category, error) {
-	args := m.Called(ctx)
+func (m *CategoryRepositoryMock) GetByType(ctx context.Context, types string) ([]Category, error) {
+	args := m.Called(ctx, types)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
@@ -59,8 +59,8 @@ func (m *CategoryUsecaseMock) GetCategoryByID(ctx context.Context, id uint) (*Ca
 	}
 	return args.Get(0).(*Category), args.Error(1)
 }
-func (m *CategoryUsecaseMock) FetchCategories(ctx context.Context) ([]Category, error) {
-	args := m.Called(ctx)
+func (m *CategoryUsecaseMock) FetchCategoriesByType(ctx context.Context, types string) ([]Category, error) {
+	args := m.Called(ctx, types)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}

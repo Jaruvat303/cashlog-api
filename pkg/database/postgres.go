@@ -2,6 +2,7 @@ package database
 
 import (
 	"context"
+	_ "embed"
 	"time"
 
 	"github.com/Jaruvat303/cashlog/cmd/config"
@@ -69,4 +70,20 @@ func InitPostgresDB(ctx context.Context, cfg *config.Config) *gorm.DB {
 	logger.Ctx(ctx).Info("PostgresSQL database connection established cleanly via Config Struct")
 
 	return db
+}
+
+//go:embed init_categories.sql
+var initCategoriesSQL string
+
+// SeedCategories ทำหน้าที่อ่านไฟล์ SQL และ Execute เข้า Database
+func SeedCategories(ctx context.Context, db *gorm.DB) error {
+
+	// รันคำสั่ง SQL ผ่าน GORM
+	if err := db.Exec(initCategoriesSQL).Error; err != nil {
+		return err
+	}
+
+	logger.Ctx(ctx).Info("Successfully seeded categories data!")
+	return nil
+
 }
