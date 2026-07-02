@@ -32,6 +32,12 @@ func main() {
 	db := database.InitPostgresDB(ctx, cfg)
 	rdb := database.InitRedisDB(ctx, cfg)
 
+	// Create Seed Category Data
+	err := database.SeedCategories(ctx, db)
+	if err != nil {
+		log.Printf("Warning: failed to seed categories: %v", err)
+	}
+
 	// Dependency Injection
 	txRepository := postgres.NewGormTransactionRepository(db, appLogger)
 	cacheRepository := redis.NewRedisDashboardRepository(rdb)
