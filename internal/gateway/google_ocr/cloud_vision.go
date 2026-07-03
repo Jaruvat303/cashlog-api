@@ -90,10 +90,6 @@ func (g *googleOCRGateway) parseSlipText(text string) *domain.OCRData {
 
 	// 🛠️ 2. กำหนดโครงสร้าง Regex ที่เจาะจงพฤติกรรมสลิป SCB
 
-	// Transaction ID ของ SCB มักจะเจอคำว่า "เลขที่อ้างอิง" หรือ "รหัสรายการ"
-	// และตามด้วยรหัสยาวๆ (เช่น 20260531xxxxxxxx) หรือบางครั้ง Google OCR อ่านสลับบรรทัด จึงดักจับเลขชุดยาว 16-20 หลักไว้ด้วย
-	txIDRegex := regexp.MustCompile(`(?:เลขที่อ้างอิง|รหัสรายการ|Ref\.?\s*No\.?)[:\s]*([A-Za-z0-9]{15,20})|([0-9]{16,20})`)
-
 	// จำนวนเงินของ SCB มักจะอยู่บรรทัดเดียวกับคำว่า "จำนวนเงิน" หรือ "Amount"
 	amountRegex := regexp.MustCompile(`(?:จำนวนเงิน|ยอดเงิน|Amount)[:\s]*([0-9,]+\.[0-9]{2})|([0-9,]+\.[0-9]{2})\s*(?:บาท|THB)`)
 
@@ -110,19 +106,7 @@ func (g *googleOCRGateway) parseSlipText(text string) *domain.OCRData {
 			continue
 		}
 
-		// 3.1 ดึงรหัส Transaction ID
-		if data.TransactionID == "" {
-			if txIDMatches := txIDRegex.FindStringSubmatch(line); len(txIDMatches) > 0 {
-				// เลือก Match Group ตัวที่ไม่ว่าง
-				if txIDMatches[1] != "" {
-					data.TransactionID = txIDMatches[1]
-				} else if txIDMatches[2] != "" {
-					data.TransactionID = txIDMatches[2]
-				}
-			}
-		}
-
-		// 3.2 ดึงจำนวนเงิน (Amount)
+		// ดึงจำนวนเงิน (Amount)
 		if data.Amount == 0 {
 			if amountMatches := amountRegex.FindStringSubmatch(line); len(amountMatches) > 0 {
 				var amtStr string
@@ -141,7 +125,7 @@ func (g *googleOCRGateway) parseSlipText(text string) *domain.OCRData {
 			}
 		}
 
-		// 3.3 ดึงข้อมูล วัน-เวลา และแปลงเป็น time.Time (พยายามแกะโครงสร้างเวลาสลิป)
+		// ดึงข้อมูล วัน-เวลา และแปลงเป็น time.Time (พยายามแกะโครงสร้างเวลาสลิป)
 		if dateMatches := dateRegex.FindStringSubmatch(line); len(dateMatches) > 4 && data.TransactionDate.Year() == time.Now().Year() {
 			// แกะข้อมูลเวลาชั่วโมง:นาที มาใช้งานก่อนเพราะแม่นยำสุด
 			timeStr := dateMatches[4] // "23:30"

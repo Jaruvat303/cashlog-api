@@ -9,7 +9,6 @@ import (
 
 type Transaction struct {
 	ID              uint
-	TransactionID   string
 	Amount          float64
 	TransactionType string
 	ReceiverName    string
@@ -23,7 +22,6 @@ type Transaction struct {
 
 type TransactionRepository interface {
 	Insert(ctx context.Context, tx *Transaction) error
-	CheckDuplicate(ctx context.Context, txID string) (bool, error)
 	FetchByTimeRange(ctx context.Context, startDate, endDate time.Time) ([]Transaction, error)
 	CalculateSummary(ctx context.Context, startDate, endDate time.Time, scope string) (*DashboardSummary, error)
 	Update(ctx context.Context, tx *Transaction) error

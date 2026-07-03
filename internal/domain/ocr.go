@@ -6,7 +6,6 @@ import (
 )
 
 type OCRData struct {
-	TransactionID   string
 	Amount          float64
 	ReceiverName    string
 	TransactionDate time.Time
