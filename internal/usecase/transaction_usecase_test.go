@@ -494,32 +494,7 @@ func TestSyncTransaction(t *testing.T) {
 			},
 		},
 		{
-			name:           "3. Duplicate Transaction ID - รหัสธุกรรมซ้ำใน DB",
-			imageBytes:     fakeBytes,
-			localImageName: "new_file_but_dup_tx.jpg",
-			setupMock: func(repo *domain.TransactionRepositoryMock, cache *domain.TransactionCacheRepositoryMock, ocr *domain.OCRGatewayMock) {
-				cache.On("CheckFileExists", ctx, "new_file_but_dup_tx.jpg").Return(false, nil)
-
-				mockORCData := &domain.OCRData{
-					TransactionID:   "TX_DUP_1234",
-					Amount:          250.00,
-					TransactionDate: now,
-				}
-				ocr.On("Extract", ctx, fakeBytes).Return(mockORCData, nil)
-
-				// จำลองว่าระบบไปเช็คกับ DB แล้วพบว่ารหัสธุรกรรมนี้เคยเซฟไปแล้ว (true, nil)
-				repo.On("CheckDuplicate", ctx, "TX_DUP_1234").Return(true, nil)
-
-				// ระบบต้องเอาชื่อใหม่ ไปบันทึกใน redis เพื่อป้องกันการบันทึกซ่ำรอบหน้า
-				cache.On("SetFileCache", ctx, "new_file_but_dup_tx.jpg").Return(nil)
-			},
-			expectedAssert: func(t *testing.T, result *domain.Transaction, err error) {
-				assert.NoError(t, err)
-				assert.Nil(t, result)
-			},
-		},
-		{
-			name:           "4. Success Path - ข้อมูลใหม่ทั้งหมด (ดักจับ Amount ติดลบด้วย)",
+			name:           "3. Success Path - ข้อมูลใหม่ทั้งหมด (ดักจับ Amount ติดลบด้วย)",
 			imageBytes:     fakeBytes,
 			localImageName: "perfact_slip.jpg",
 			setupMock: func(repo *domain.TransactionRepositoryMock, cache *domain.TransactionCacheRepositoryMock, ocr *domain.OCRGatewayMock) {
@@ -527,17 +502,14 @@ func TestSyncTransaction(t *testing.T) {
 
 				// จำลองเคส OCR พ้น Amount ติดลบ (-50) เพื่อทดสอบตัว Fallback
 				mockOCRData := &domain.OCRData{
-					TransactionID:   "TX_NEW_999",
 					Amount:          -50,
 					ReceiverName:    "ร้านค้าทดสอบ",
 					TransactionDate: now,
 				}
 				ocr.On("Extract", ctx, fakeBytes).Return(mockOCRData, nil)
-				repo.On("CheckDuplicate", ctx, "TX_NEW_999").Return(false, nil)
 
 				// ตรวจสอบข้อมูลที่จะลงฐานข้อมูล (ต้องเปลี่ยนจาก -50.00 เป็น 0.00)
 				expectedTx := &domain.Transaction{
-					TransactionID:   "TX_NEW_999",
 					Amount:          0.00,
 					TransactionType: "EXPENSE",
 					ReceiverName:    "ร้านค้าทดสอบ",
@@ -557,11 +529,10 @@ func TestSyncTransaction(t *testing.T) {
 				assert.NotNil(t, result)
 				assert.Equal(t, 0.0, result.Amount)
 				assert.Equal(t, "EXPENSE", result.TransactionType)
-				assert.Equal(t, "TX_NEW_999", result.TransactionID)
 			},
 		},
 		{
-			name:           "5. Failed Insert to DB - ฐานข้อมูลมีปัญหา",
+			name:           "4. Failed Insert to DB - ฐานข้อมูลมีปัญหา",
 			imageBytes:     fakeBytes,
 			localImageName: "perfect_slip.jpg",
 			setupMock: func(repo *domain.TransactionRepositoryMock, cache *domain.TransactionCacheRepositoryMock, ocr *domain.OCRGatewayMock) {
@@ -569,17 +540,14 @@ func TestSyncTransaction(t *testing.T) {
 
 				// จำลองเคส OCR พ่น Amount ติดลบมา (-50.00) เพื่อทดสอบตัว Fallback ลอจิกในโค้ดคุณด้วย
 				mockOCRData := &domain.OCRData{
-					TransactionID:   "TX_NEW_999",
 					Amount:          -50.00,
 					ReceiverName:    "ร้านค้าทดสอบ",
 					TransactionDate: now,
 				}
 				ocr.On("Extract", ctx, fakeBytes).Return(mockOCRData, nil)
-				repo.On("CheckDuplicate", ctx, "TX_NEW_999").Return(false, nil)
 
 				// ตรวจสอบข้อมูลที่จะลงฐานข้อมูล (ต้องเปลี่ยนจาก -50.00 เป็น 0.00 ตามลอจิกคุณ)
 				expectedTx := &domain.Transaction{
-					TransactionID:   "TX_NEW_999",
 					Amount:          0.00, // โค้ดคุณเก่งมาก ดักเปลี่ยนติดลบให้เป็น 0.00 อัตโนมัติ
 					TransactionType: "EXPENSE",
 					ReceiverName:    "ร้านค้าทดสอบ",

@@ -11,6 +11,7 @@ import (
 	vision "cloud.google.com/go/vision/v2/apiv1"
 	"cloud.google.com/go/vision/v2/apiv1/visionpb"
 	"github.com/Jaruvat303/cashlog/internal/domain"
+	"github.com/Jaruvat303/cashlog/pkg/timeutil"
 )
 
 type googleOCRGateway struct {
@@ -72,6 +73,11 @@ func (g *googleOCRGateway) Extract(ctx context.Context, imageBytes []byte) (*dom
 	// ข้อความดิบทั้งหมดที่ AI อ่านได้จากสลืปจะรวมอยู่ใน Description ของดัชนีแรก [0]
 	fullText := annotations[0].Description
 
+	// 🚨 [เพิ่มตรงนี้] พิมพ์ข้อความดิบออกทางหน้าจอ เพื่อดูว่า AI อ่านสลิปใบนี้ออกมาเป็นยังไง!
+	fmt.Println("========== 🤖 VISION AI RAW TEXT ==========")
+	fmt.Println(fullText)
+	fmt.Println("===========================================")
+
 	// นำข้อความดิบไปเข้ากับบวนการสกัดข้อมูล (Data Parsing)
 	ocrData := g.parseSlipText(fullText)
 
@@ -90,19 +96,17 @@ func (g *googleOCRGateway) parseSlipText(text string) *domain.OCRData {
 
 	// 🛠️ 2. กำหนดโครงสร้าง Regex ที่เจาะจงพฤติกรรมสลิป SCB
 
-	// Transaction ID ของ SCB มักจะเจอคำว่า "เลขที่อ้างอิง" หรือ "รหัสรายการ"
-	// และตามด้วยรหัสยาวๆ (เช่น 20260531xxxxxxxx) หรือบางครั้ง Google OCR อ่านสลับบรรทัด จึงดักจับเลขชุดยาว 16-20 หลักไว้ด้วย
-	txIDRegex := regexp.MustCompile(`(?:เลขที่อ้างอิง|รหัสรายการ|Ref\.?\s*No\.?)[:\s]*([A-Za-z0-9]{15,20})|([0-9]{16,20})`)
+	// เครื่องสแกนรูปร่าง: วันเวลา
+	// ดักจับ: "04 ก.ค. 2569 - 10:15" หรือ "4 ก.ค. 69 - 10:15"
+	dateRegex := regexp.MustCompile(`([0-9]{1,2})\s*([ก-์A-Za-z\.]+)\s*([0-9]{2,4})\s*-\s*([0-9]{2}:[0-9]{2})`)
 
-	// จำนวนเงินของ SCB มักจะอยู่บรรทัดเดียวกับคำว่า "จำนวนเงิน" หรือ "Amount"
-	amountRegex := regexp.MustCompile(`(?:จำนวนเงิน|ยอดเงิน|Amount)[:\s]*([0-9,]+\.[0-9]{2})|([0-9,]+\.[0-9]{2})\s*(?:บาท|THB)`)
-
-	// วันเวลาในสลิป SCB มักมาในรูปแบบ "31 พ.ค. 2569 - 23:30" หรือ "31 May 2026, 23:30"
-	// เราใช้ Regex ช่วยดักจับโครงสร้าง วัน เดือน ปี และ เวลา ออกมา
-	dateRegex := regexp.MustCompile(`([0-9]{1,2})\s*([ก-์A-Za-z\.]+)\s*([0-9]{2,4})[\s,-]*([0-9]{2}:[0-9]{2})`)
-
+	// 2. Regex ดักจับรูปแบบตัวเลขจำนวนเงินที่อยู่เดี่ยวๆ ใน 1 บรรทัด เช่น "57.00" หรือ "1,250.00"
+	// รูปแบบ A: ตัวเลขโดดๆ ที่มีทศนิยม .00 (เช่น "57.00" ซึ่งมักจะอยู่บรรทัดล่างสุด)
+	amountRegex := regexp.MustCompile(`^([0-9]{1,3}(?:,[0-9]{3})*\.[0-9]{2})$`)	
+	
 	// ตัวแปรจำสถานะบรรทัด เพื่อช่วยแกะชื่อผู้รับเงิน
 	isNextLineReceiver := false
+	isNextLineAmount := false
 
 	for _, line := range lines {
 		line = strings.TrimSpace(line)
@@ -110,70 +114,73 @@ func (g *googleOCRGateway) parseSlipText(text string) *domain.OCRData {
 			continue
 		}
 
-		// 3.1 ดึงรหัส Transaction ID
-		if data.TransactionID == "" {
-			if txIDMatches := txIDRegex.FindStringSubmatch(line); len(txIDMatches) > 0 {
-				// เลือก Match Group ตัวที่ไม่ว่าง
-				if txIDMatches[1] != "" {
-					data.TransactionID = txIDMatches[1]
-				} else if txIDMatches[2] != "" {
-					data.TransactionID = txIDMatches[2]
-				}
-			}
-		}
+		// ดึงข้อมูล วัน-เวลา และแปลงเป็น time.Time (พยายามแกะโครงสร้างเวลาสลิป)
+		if dateMatches := dateRegex.FindStringSubmatch(line); len(dateMatches) > 4 {
+			dayStr, monthStr, yearStr, timeStr := dateMatches[1], dateMatches[2], dateMatches[3], dateMatches[4]
 
-		// 3.2 ดึงจำนวนเงิน (Amount)
-		if data.Amount == 0 {
-			if amountMatches := amountRegex.FindStringSubmatch(line); len(amountMatches) > 0 {
-				var amtStr string
-				if amountMatches[1] != "" {
-					amtStr = amountMatches[1]
-				} else if amountMatches[2] != "" {
-					amtStr = amountMatches[2]
-				}
-
-				if amtStr != "" {
-					cleanAmountStr := strings.ReplaceAll(amtStr, ",", "")
-					if parsedAmount, err := strconv.ParseFloat(cleanAmountStr, 64); err == nil {
-						data.Amount = parsedAmount
-					}
-				}
-			}
-		}
-
-		// 3.3 ดึงข้อมูล วัน-เวลา และแปลงเป็น time.Time (พยายามแกะโครงสร้างเวลาสลิป)
-		if dateMatches := dateRegex.FindStringSubmatch(line); len(dateMatches) > 4 && data.TransactionDate.Year() == time.Now().Year() {
-			// แกะข้อมูลเวลาชั่วโมง:นาที มาใช้งานก่อนเพราะแม่นยำสุด
-			timeStr := dateMatches[4] // "23:30"
-			var hour, min int
+			var day, year, hour, min int
+			fmt.Sscanf(dayStr, "%d", &day)
+			fmt.Sscanf(yearStr, "%d", &year)
 			fmt.Sscanf(timeStr, "%d:%d", &hour, &min)
 
-			// นำมาประกอบร่างโครงสร้างเวลาพื้นฐาน (สำหรับความสมบูรณ์ในการบันทึก DB)
-			data.TransactionDate = time.Date(time.Now().Year(), time.Now().Month(), time.Now().Day(), hour, min, 0, 0, time.Local)
+			month, err := timeutil.ParseThaiMonthAbbr(monthStr)
+			if err != nil {
+				month = timeutil.NowInBangkok().Month()
+			}
+
+			if year > 2500 {
+				year -= 543 // แปลง พ.ศ. เป็น ค.ศ.
+			}
+
+			data.TransactionDate = time.Date(year, month, day, hour, min, 0, 0, timeutil.BangKokLoc)
 		}
 
-		// 3.4 ดึงชื่อผู้รับเงิน (Receiver Name)
-		// สลิป SCB จะมีคำสำคัญบอกว่าเงินโอนไปหาใคร เช่นบรรทัดก่อนหน้าเขียนว่า "เข้าบัญชี" หรือ "ไปยัง"
-		// หรือในบรรทัดนั้นมีคำระบุตำแหน่งบุคคล/ร้านค้าปลายทาง
-		if strings.Contains(line, "เข้าบัญชี") || strings.Contains(line, "ไปยัง") || strings.Contains(line, "โอนเงินสำเร็จ") {
-			isNextLineReceiver = true
-			continue
-		}
+		// ดึงจำนวนเงิน (Amount)
+		if data.Amount == 0 {
+			// กรณีบรรทัดนี้คือคำว่า "จำนวนเงิน" หรือตำว่า "ยอดเงิน"
+			if strings.Contains(line, "จำนวนเงิน") || strings.Contains(line, "ยอดเงิน") {
+				// หลังคำว่า "จำนวนเงิน" หรือตำว่า "ยอดเงิน" ลองหาตัวเลขในบรรทัดเดียวกันก่อน
+				if amtMatch := amountRegex.FindStringSubmatch(line); len(amtMatch) > 1 {
+					data.Amount = parseAmountString(amtMatch[1])
+				} else {
+					isNextLineAmount = true
+				}
+				continue
+			}
 
-		if isNextLineReceiver && data.ReceiverName == "" {
-			// คัดกรองบรรทัดถัดมาที่ไม่ใช่เลขบัญชี หรือคำว่า บาท ให้เป็นชื่อผู้รับเงิน
-			if !strings.Contains(line, "xxx-x") && !strings.Contains(line, "บาท") {
-				data.ReceiverName = line
-				isNextLineReceiver = false // แกะได้แล้วปิดสวิตช์
+			// กรณีเป็นบรรทัดที่ตามหลังตำว่า "จำนวนเงิน
+			if isNextLineAmount {
+				if amtMatch := amountRegex.FindStringSubmatch(line); len(amtMatch) > 1 {
+					data.Amount = parseAmountString(amtMatch[1])
+					isNextLineAmount = false
+					continue
+				}
 			}
 		}
 
-		// กรณีระบบเดาแบบ Fallback เพิ่มเติม หากบรรทัดข้างบนหลุดรอดไป
+		// ดึงชื่อผู้รับเงิน (Receiver Name)
 		if data.ReceiverName == "" {
-			if strings.Contains(line, "นาย ") || strings.Contains(line, "นางสาว ") || strings.Contains(line, "บริษัท ") || strings.Contains(line, "บจก. ") {
-				data.ReceiverName = line
+			if strings.Contains(line, "ไปยัง") {
+				// ลบคำว่า "ไปยัง" ออก เผื่อ OCR อ่านติดมาในบรรทัดเดียวกัน
+				namePart := strings.TrimSpace(strings.Replace(line, "ไปยัง", "", 1))
+
+				if namePart != "" {
+					data.ReceiverName = cleanReceiverName(namePart)
+				} else {
+					// ถ้าคำว่า ไปยัง อยู่เดี่ยวๆ ให้รออ่านชื่อในบรรทัดถัดไป
+					isNextLineReceiver = true
+				}
+
+				continue
+			}
+
+			if isNextLineReceiver {
+				data.ReceiverName = cleanReceiverName(line)
+				isNextLineReceiver = false
+				continue
 			}
 		}
+
 	}
 
 	return data
@@ -182,4 +189,23 @@ func (g *googleOCRGateway) parseSlipText(text string) *domain.OCRData {
 // NewGoogleOCRGateway ทำหน้าที่สร้างอินสแตนซ์สำหรับเรียกใช้บริการ OCR
 func NewGoogleOCRGateway() domain.OCRGateway {
 	return &googleOCRGateway{}
+}
+
+// 🛠️ ฟังก์ชันตัวช่วย: แปลงข้อความจำนวนเงินเป็น float64
+func parseAmountString(amtStr string) float64 {
+	cleanStr := strings.ReplaceAll(amtStr, ",", "")
+	val, _ := strconv.ParseFloat(cleanStr, 64)
+	return val
+}
+
+// 🛠️ ฟังก์ชันตัวช่วย: ตัดคำว่า "SCB มณี SHOP (...)" ออกเพื่อเอาแค่ชื่อร้านข้างใน
+func cleanReceiverName(name string) string {
+	if strings.Contains(name, "SCB มณี SHOP") {
+		// ใช้ Regex ดึงข้อความที่อยู่ในวงเล็บ
+		re := regexp.MustCompile(`\((.*?)\)`)
+		if matches := re.FindStringSubmatch(name); len(matches) > 1 {
+			return strings.TrimSpace(matches[1]) // จะได้คำว่า "เฟชรมาร์ท" ออกมาเพียวๆ
+		}
+	}
+	return name
 }

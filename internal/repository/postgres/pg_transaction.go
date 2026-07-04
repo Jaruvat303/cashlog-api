@@ -127,24 +127,7 @@ func (g *gormTransactionRepository) FetchByTimeRange(ctx context.Context, startD
 	return txs, nil
 }
 
-// CheckDuplicate implements [domain.TransactionRepository]. ทำหน้าที่ตรวจสอบรหัสสลิป TransactionID ว่าบันทึกข้อมูลไปแล้วรึยัง
-func (g *gormTransactionRepository) CheckDuplicate(ctx context.Context, txID string) (bool, error) {
 
-	var count int64
-	// ติวรี่เพื่อนับจำนวนแถวที่มี transaction_id ตรงกับสลืปใบนี้
-	err := g.db.WithContext(ctx).
-		Model(&domain.Transaction{}).
-		Where("transaction_id = ?", txID).
-		Count(&count).
-		Error
-
-	if err != nil {
-		return false, HandlerDBError(ctx, err, g.log)
-	}
-
-	// ถ้า count > 0 แสดงว่ามีข้อมูลแล้ว (ซ้ำ)
-	return count > 0, nil
-}
 
 // Insert implements [domain.TransactionRepository]. บันทึกรายการลงในฐานข้อมูล
 func (g *gormTransactionRepository) Insert(ctx context.Context, tx *domain.Transaction) error {

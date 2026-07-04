@@ -263,30 +263,9 @@ func (t *transactionUsecase) SyncTransaction(ctx context.Context, imageBytes []b
 		txDate = time.Now()
 	}
 
-	// นำ TransactionID ไปเช็คความซ่้ำซ้อนใน Database
-	if ocrResult.TransactionID != "" {
-		isTxDuplicate, err := t.txRepo.CheckDuplicate(ctx, ocrResult.TransactionID)
-		if err == nil && isTxDuplicate {
-			log.Info("sync transaction skipped (duplicate transaction_id detected)",
-				zap.String("local_image_name", localImageName),
-				zap.String("transaction_id", ocrResult.TransactionID),
-			)
-
-			// ถ้ารหัสซ่้ำ(แตชื่อไฟล์ใหม่) เราจะบันทึกชื่อไฟล์ไว้ใน Redis ไว้ เพื่อป้องกันการแสกนซ้ำรอบหน้า
-			if cacheErr := t.cacheRepo.SetFileCache(ctx, localImageName); cacheErr != nil {
-				log.Warn("failed to set duplicate file cache in redis",
-					zap.Error(cacheErr),
-					zap.String("local_image_name", localImageName),
-				)
-			}
-			return nil, nil
-		}
-	}
-
 	// บันทึก Transaction ใหม่ลงในฐานข้อมูล
 	txType := "EXPENSE"
 	newTx := &domain.Transaction{
-		TransactionID:   ocrResult.TransactionID,
 		Amount:          amount,
 		TransactionType: txType,
 		ReceiverName:    ocrResult.ReceiverName,
