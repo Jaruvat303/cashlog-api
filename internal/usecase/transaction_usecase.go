@@ -14,10 +14,10 @@ import (
 )
 
 type transactionUsecase struct {
-	txRepo    domain.TransactionRepository
-	cacheRepo domain.CacheRepository
-	ocrGate   domain.OCRGateway
-	log       logger.Logger
+	txRepo     domain.TransactionRepository
+	cacheRepo  domain.CacheRepository
+	geminiRepo domain.GeminiSlipRepository
+	log        logger.Logger
 }
 
 // Delete implements [domain.TransactionUsecase].
@@ -242,35 +242,40 @@ func (t *transactionUsecase) SyncTransaction(ctx context.Context, imageBytes []b
 		return nil, nil
 	}
 
-	// ส่งรูปไปให้ AI OCR ประมวลผล
-	ocrResult, err := t.ocrGate.Extract(ctx, imageBytes)
+	// ส่งรูปให้ gemini ประมวลผล
+	slipResult, err := t.geminiRepo.ExtractData(ctx, imageBytes)
 	if err != nil {
-		return nil, fmt.Errorf("ocr extraction failed: %w", err)
+		return nil, err
 	}
 
 	// จัดการข้อมูลเบื่องต้น
-	amount := ocrResult.Amount
+	amount := slipResult.Amount
 	if amount < 0 {
-		log.Warn("ocr result constains negative amount, fallback to 0.00",
+		log.Warn("gemini result constains negative amount, fallback to 0.00",
 			zap.String("local_image_name", localImageName),
-			zap.Float64("ocr_amount", amount),
+			zap.Float64("gemini_amount", amount),
 		)
 		amount = 0.00 // ถ้าอ่านต่าไม่ได้ หรือค่าติดลบกำหนดให้เป็นค่า 0 value
 	}
 
-	txDate := ocrResult.TransactionDate
-	if txDate.IsZero() {
-		txDate = time.Now()
+	// จัดการเวลา
+	parsedTime, err := timeutil.ParseAISlipTime(slipResult.TransTime)
+	if err != nil {
+		log.Warn("gemini result constains negative amount, fallback to 0.00",
+			zap.Time("gemini result constans wrong date format ", parsedTime),
+			zap.Error(err),
+		)
+		parsedTime = timeutil.NowInBangkok()
 	}
 
 	// บันทึก Transaction ใหม่ลงในฐานข้อมูล
-	txType := "EXPENSE"
+	txType := "expense"
 	newTx := &domain.Transaction{
 		Amount:          amount,
 		TransactionType: txType,
-		ReceiverName:    ocrResult.ReceiverName,
+		ReceiverName:    slipResult.ReceiverName,
 		LocalImageName:  localImageName,
-		TransactionDate: txDate,
+		TransactionDate: parsedTime,
 	}
 
 	if err := t.txRepo.Insert(ctx, newTx); err != nil {
@@ -279,6 +284,7 @@ func (t *transactionUsecase) SyncTransaction(ctx context.Context, imageBytes []b
 
 	// เพิ่มข่อมูลในระบบ Cache หลังบันทึกข้อมูลเสร็จ
 	if cacheErr := t.cacheRepo.SetFileCache(ctx, localImageName); cacheErr != nil {
+
 		log.Warn("failed to set success file cache in redis",
 			zap.Error(err),
 			zap.String("local_image_name", localImageName),
@@ -288,6 +294,8 @@ func (t *transactionUsecase) SyncTransaction(ctx context.Context, imageBytes []b
 	// ล้างแคชแดชบอร์ดสรุปผลประจำเดือน เพื่อตำนวนยอดใหม่
 	periodKey := fmt.Sprintf("summary:monthly:%d-%02d", newTx.TransactionDate.Year(), newTx.TransactionDate.Month())
 	if invalidateErr := t.cacheRepo.InvalidateCache(ctx, periodKey); invalidateErr != nil {
+		// ใส่ log นี้ใน UseCase หรือ Test เพื่อดูค่าที่แท้จริง
+		fmt.Printf("DEBUG: Transaction Year: %d, Month: %d\n", newTx.TransactionDate.Year(), newTx.TransactionDate.Month())
 		log.Warn("failed to invalidate dashboard summary cache",
 			zap.Error(invalidateErr),
 			zap.String("cache_key", periodKey),
@@ -301,11 +309,14 @@ func (t *transactionUsecase) SyncTransaction(ctx context.Context, imageBytes []b
 	return newTx, nil
 }
 
-func NewTransactionUsecase(txRepo domain.TransactionRepository, cacheRepo domain.CacheRepository, ocrGateway domain.OCRGateway, log logger.Logger) domain.TransactionUsecase {
+func NewTransactionUsecase(txRepo domain.TransactionRepository,
+	cacheRepo domain.CacheRepository,
+	geminiRepo domain.GeminiSlipRepository,
+	log logger.Logger) domain.TransactionUsecase {
 	return &transactionUsecase{
-		txRepo:    txRepo,
-		cacheRepo: cacheRepo,
-		ocrGate:   ocrGateway,
-		log:       log,
+		txRepo:     txRepo,
+		cacheRepo:  cacheRepo,
+		geminiRepo: geminiRepo,
+		log:        log,
 	}
 }

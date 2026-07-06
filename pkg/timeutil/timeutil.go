@@ -1,7 +1,6 @@
 package timeutil
 
 import (
-	"errors"
 	"time"
 )
 
@@ -22,35 +21,9 @@ func NowInBangkok() time.Time {
 	return time.Now().In(BangKokLoc)
 }
 
-// ParseThaiMonthAbbr รับค่าตัวย่อเดือนภาษาไทยและแปลงเป็น time.Month
-func ParseThaiMonthAbbr(abbr string) (time.Month, error) {
-	switch abbr {
-	case "ม.ค.":
-		return time.January, nil
-	case "ก.พ.":
-		return time.February, nil
-	case "มี.ค.":
-		return time.March, nil
-	case "เม.ย.":
-		return time.April, nil
-	case "พ.ค.":
-		return time.May, nil
-	case "มิ.ย.":
-		return time.June, nil
-	case "ก.ค.":
-		return time.July, nil
-	case "ส.ค.":
-		return time.August, nil
-	case "ก.ย.":
-		return time.September, nil
-	case "ต.ค.":
-		return time.October, nil
-	case "พ.ย.":
-		return time.November, nil
-	case "ธ.ค.":
-		return time.December, nil
-	default:
-		// ส่งค่า 0 และ error กลับไปหากไม่ตรงกับตัวย่อใดเลย
-		return 0, errors.New("invalid Thai month abbreviation")
-	}
+// ในส่วนของ repository หรือ usecase หลังจากได้ result จาก Gemini
+func ParseAISlipTime(aiTimeString string) (time.Time, error) {
+	// ใช้รูปแบบที่ตกลงกับ AI คือ "2006-01-02 15:04:05"
+	// บอก Go ว่านี่คือเวลาใน Timezone Bangkok ตั้งแต่ต้น
+	return time.ParseInLocation("2006-01-02 15:04:05", aiTimeString, BangKokLoc)
 }

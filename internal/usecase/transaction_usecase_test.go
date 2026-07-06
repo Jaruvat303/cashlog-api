@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"testing"
 	"time"
 
@@ -44,7 +45,7 @@ func TestGetMonthlyHistory(t *testing.T) {
 		name           string
 		month          int
 		year           int
-		setupMock      func(repo *domain.TransactionRepositoryMock, cache *domain.TransactionCacheRepositoryMock, ocr *domain.OCRGatewayMock)
+		setupMock      func(repo *domain.TransactionRepositoryMock, cache *domain.TransactionCacheRepositoryMock)
 		expectedResult []domain.Transaction
 		expectedError  bool
 	}{
@@ -52,7 +53,7 @@ func TestGetMonthlyHistory(t *testing.T) {
 			name:  "1. Successfully",
 			month: 6,
 			year:  2026,
-			setupMock: func(repo *domain.TransactionRepositoryMock, cache *domain.TransactionCacheRepositoryMock, ocr *domain.OCRGatewayMock) {
+			setupMock: func(repo *domain.TransactionRepositoryMock, cache *domain.TransactionCacheRepositoryMock) {
 				ctx := mock.Anything
 
 				repo.On("FetchByTimeRange", ctx, startDate, endDate).Return(mockMonthlyHistory, nil)
@@ -64,7 +65,7 @@ func TestGetMonthlyHistory(t *testing.T) {
 			name:  "2. DB Error",
 			month: 6,
 			year:  2026,
-			setupMock: func(repo *domain.TransactionRepositoryMock, cache *domain.TransactionCacheRepositoryMock, ocr *domain.OCRGatewayMock) {
+			setupMock: func(repo *domain.TransactionRepositoryMock, cache *domain.TransactionCacheRepositoryMock) {
 				ctx := mock.Anything
 				repo.On("FetchByTimeRange", ctx, startDate, endDate).Return(nil, errors.New("DB Error"))
 			},
@@ -78,13 +79,13 @@ func TestGetMonthlyHistory(t *testing.T) {
 			// Arrange
 			mockRepo := new(domain.TransactionRepositoryMock)
 			mockCacheRepo := new(domain.TransactionCacheRepositoryMock)
-			mockOCR := new(domain.OCRGatewayMock)
+			mockGemini := new(domain.GeminiSlipRepositoryMock)
 			mockLogger := logger.NewNopLogger()
 			ctx := context.Background()
 
-			tt.setupMock(mockRepo, mockCacheRepo, mockOCR)
+			tt.setupMock(mockRepo, mockCacheRepo)
 
-			txUsecase := usecase.NewTransactionUsecase(mockRepo, mockCacheRepo, mockOCR, mockLogger)
+			txUsecase := usecase.NewTransactionUsecase(mockRepo, mockCacheRepo, mockGemini, mockLogger)
 
 			// Act
 			result, err := txUsecase.GetMonthlyHistory(ctx, tt.month, tt.year)
@@ -101,7 +102,6 @@ func TestGetMonthlyHistory(t *testing.T) {
 
 			mockRepo.AssertExpectations(t)
 			mockCacheRepo.AssertExpectations(t)
-			mockOCR.AssertExpectations(t)
 		})
 	}
 }
@@ -123,7 +123,7 @@ func TestGetDashboardSummary(t *testing.T) {
 		scope          string
 		month          int
 		year           int
-		setupMock      func(repo *domain.TransactionRepositoryMock, cache *domain.TransactionCacheRepositoryMock, ocr *domain.OCRGatewayMock)
+		setupMock      func(repo *domain.TransactionRepositoryMock, cache *domain.TransactionCacheRepositoryMock)
 		expectedResult *domain.DashboardSummary
 		expectedError  bool
 	}{
@@ -132,7 +132,7 @@ func TestGetDashboardSummary(t *testing.T) {
 			scope: "monthly",
 			month: 6,
 			year:  2026,
-			setupMock: func(repo *domain.TransactionRepositoryMock, cache *domain.TransactionCacheRepositoryMock, ocr *domain.OCRGatewayMock) {
+			setupMock: func(repo *domain.TransactionRepositoryMock, cache *domain.TransactionCacheRepositoryMock) {
 				ctx := mock.Anything
 				periodKey := "summary:monthly:2026-06"
 
@@ -149,7 +149,7 @@ func TestGetDashboardSummary(t *testing.T) {
 			scope: "monthly",
 			month: 6,
 			year:  2026,
-			setupMock: func(repo *domain.TransactionRepositoryMock, cache *domain.TransactionCacheRepositoryMock, ocr *domain.OCRGatewayMock) {
+			setupMock: func(repo *domain.TransactionRepositoryMock, cache *domain.TransactionCacheRepositoryMock) {
 				ctx := mock.Anything
 				startDate := time.Date(2026, time.Month(6), 1, 0, 0, 0, 0, timeutil.BangKokLoc)
 				endDate := startDate.AddDate(0, 1, 0).Add(-time.Nanosecond)
@@ -172,7 +172,7 @@ func TestGetDashboardSummary(t *testing.T) {
 			scope: "yearly",
 			month: 1,
 			year:  2026,
-			setupMock: func(repo *domain.TransactionRepositoryMock, cache *domain.TransactionCacheRepositoryMock, ocr *domain.OCRGatewayMock) {
+			setupMock: func(repo *domain.TransactionRepositoryMock, cache *domain.TransactionCacheRepositoryMock) {
 				ctx := mock.Anything
 				periodKey := "summary:year:2026"
 
@@ -204,7 +204,7 @@ func TestGetDashboardSummary(t *testing.T) {
 			scope: "monthly",
 			month: 6,
 			year:  2026,
-			setupMock: func(repo *domain.TransactionRepositoryMock, cache *domain.TransactionCacheRepositoryMock, ocr *domain.OCRGatewayMock) {
+			setupMock: func(repo *domain.TransactionRepositoryMock, cache *domain.TransactionCacheRepositoryMock) {
 				ctx := mock.Anything
 				periodKey := "summary:monthly:2026-06"
 
@@ -227,15 +227,15 @@ func TestGetDashboardSummary(t *testing.T) {
 			// Arrange: สร้างวัตถุจำลองและฉีดเข้าไปใน usecase
 			mockRepo := new(domain.TransactionRepositoryMock)
 			mockCache := new(domain.TransactionCacheRepositoryMock)
-			mockOCR := new(domain.OCRGatewayMock)
+			mockGemini := new(domain.GeminiSlipRepositoryMock)
 			mockLogger := logger.NewNopLogger()
 			ctx := context.Background()
 
-			tt.setupMock(mockRepo, mockCache, mockOCR)
+			tt.setupMock(mockRepo, mockCache)
 
 			logger.InitLogger("development")
 			// นำ Mock ไปใส่ใน usecase
-			txUsecase := usecase.NewTransactionUsecase(mockRepo, mockCache, mockOCR, mockLogger)
+			txUsecase := usecase.NewTransactionUsecase(mockRepo, mockCache, mockGemini, mockLogger)
 
 			// Act
 			result, err := txUsecase.GetDashboardSummary(ctx, tt.scope, tt.month, tt.year)
@@ -254,7 +254,6 @@ func TestGetDashboardSummary(t *testing.T) {
 
 			mockRepo.AssertExpectations(t)
 			mockCache.AssertExpectations(t)
-			mockOCR.AssertExpectations(t)
 
 		})
 	}
@@ -271,13 +270,13 @@ func TestDeleteTransaction(t *testing.T) {
 	tests := []struct {
 		name          string
 		id            uint
-		setupMock     func(repo *domain.TransactionRepositoryMock, cache *domain.TransactionCacheRepositoryMock, ocr *domain.OCRGatewayMock)
+		setupMock     func(repo *domain.TransactionRepositoryMock, cache *domain.TransactionCacheRepositoryMock)
 		expectedError bool
 	}{
 		{
 			name: "1. DB Error - ค้นหาข้อมูล Transaction ไม่พบ",
 			id:   99,
-			setupMock: func(repo *domain.TransactionRepositoryMock, cache *domain.TransactionCacheRepositoryMock, ocr *domain.OCRGatewayMock) {
+			setupMock: func(repo *domain.TransactionRepositoryMock, cache *domain.TransactionCacheRepositoryMock) {
 				repo.On("GetByID", mock.Anything, uint(99)).Return(nil, domain.ErrNotFound)
 			},
 
@@ -286,7 +285,7 @@ func TestDeleteTransaction(t *testing.T) {
 		{
 			name: "2. DB Error - ลบข้อมูลไม่สำเร็จ ฐานข้อมูลมีปัญหา",
 			id:   1,
-			setupMock: func(repo *domain.TransactionRepositoryMock, cache *domain.TransactionCacheRepositoryMock, ocr *domain.OCRGatewayMock) {
+			setupMock: func(repo *domain.TransactionRepositoryMock, cache *domain.TransactionCacheRepositoryMock) {
 				repo.On("GetByID", mock.Anything, uint(1)).Return(mockFetchTransaction, nil)
 				repo.On("Delete", mock.Anything, uint(1)).Return(domain.ErrInternalDB)
 			},
@@ -295,7 +294,7 @@ func TestDeleteTransaction(t *testing.T) {
 		{
 			name: "3. Success - ลบข้อมูลสำเร็จ",
 			id:   1,
-			setupMock: func(repo *domain.TransactionRepositoryMock, cache *domain.TransactionCacheRepositoryMock, ocr *domain.OCRGatewayMock) {
+			setupMock: func(repo *domain.TransactionRepositoryMock, cache *domain.TransactionCacheRepositoryMock) {
 				repo.On("GetByID", mock.Anything, uint(1)).Return(mockFetchTransaction, nil)
 				repo.On("Delete", mock.Anything, uint(1)).Return(nil)
 				cache.On("InvalidateCache", mock.Anything, mock.Anything).Return(nil)
@@ -309,14 +308,14 @@ func TestDeleteTransaction(t *testing.T) {
 			// Arrange
 			mockRepo := new(domain.TransactionRepositoryMock)
 			mockCache := new(domain.TransactionCacheRepositoryMock)
-			mockOCR := new(domain.OCRGatewayMock)
+			mockGemini := new(domain.GeminiSlipRepositoryMock)
 			mockLogger := logger.NewNopLogger()
 
-			tt.setupMock(mockRepo, mockCache, mockOCR)
+			tt.setupMock(mockRepo, mockCache)
 
 			ctx := context.Background()
 
-			uc := usecase.NewTransactionUsecase(mockRepo, mockCache, mockOCR, mockLogger)
+			uc := usecase.NewTransactionUsecase(mockRepo, mockCache, mockGemini, mockLogger)
 
 			// Act
 			err := uc.DeleteTransaction(ctx, tt.id)
@@ -330,7 +329,6 @@ func TestDeleteTransaction(t *testing.T) {
 
 			mockRepo.AssertExpectations(t)
 			mockCache.AssertExpectations(t)
-			mockOCR.AssertExpectations(t)
 
 		})
 	}
@@ -365,7 +363,7 @@ func TestUpdateTransaction(t *testing.T) {
 		name           string
 		id             uint
 		input          dto.UpdateTransactionInput
-		setupMock      func(repo *domain.TransactionRepositoryMock, cache *domain.TransactionCacheRepositoryMock, ocr *domain.OCRGatewayMock)
+		setupMock      func(repo *domain.TransactionRepositoryMock, cache *domain.TransactionCacheRepositoryMock)
 		expectedResult *domain.Transaction
 		expectedError  bool
 	}{
@@ -373,7 +371,7 @@ func TestUpdateTransaction(t *testing.T) {
 			name:  "1. Database Filure - ไม่สามารถหาข้อมูล​ Transaction จาก ID ได้",
 			id:    uint(99),
 			input: mockInput,
-			setupMock: func(repo *domain.TransactionRepositoryMock, cache *domain.TransactionCacheRepositoryMock, ocr *domain.OCRGatewayMock) {
+			setupMock: func(repo *domain.TransactionRepositoryMock, cache *domain.TransactionCacheRepositoryMock) {
 				repo.On("GetByID", mock.Anything, uint(99)).Return(nil, domain.ErrNotFound)
 
 			},
@@ -384,7 +382,7 @@ func TestUpdateTransaction(t *testing.T) {
 			name:  "2. Sucess case - แก้ไขข้อมูลสำเร็จ",
 			id:    uint(1),
 			input: mockInput,
-			setupMock: func(repo *domain.TransactionRepositoryMock, cache *domain.TransactionCacheRepositoryMock, ocr *domain.OCRGatewayMock) {
+			setupMock: func(repo *domain.TransactionRepositoryMock, cache *domain.TransactionCacheRepositoryMock) {
 				repo.On("GetByID", mock.Anything, uint(1)).Return(mockFetchTransaction, nil)
 				repo.On("Update", mock.Anything, mock.MatchedBy(func(tx *domain.Transaction) bool {
 					return tx.ID == 1 &&
@@ -403,7 +401,7 @@ func TestUpdateTransaction(t *testing.T) {
 			name:  "3. Datebase Error - ฐานข้อมูลมีปัญหาไม่สามารถระบุได้",
 			id:    uint(1),
 			input: mockInput,
-			setupMock: func(repo *domain.TransactionRepositoryMock, cache *domain.TransactionCacheRepositoryMock, ocr *domain.OCRGatewayMock) {
+			setupMock: func(repo *domain.TransactionRepositoryMock, cache *domain.TransactionCacheRepositoryMock) {
 				repo.On("GetByID", mock.Anything, uint(1)).Return(mockFetchTransaction, nil)
 				repo.On("Update", mock.Anything, mockFetchTransaction).Return(domain.ErrInternalDB)
 
@@ -418,14 +416,14 @@ func TestUpdateTransaction(t *testing.T) {
 			// Arrange
 			mockRepo := new(domain.TransactionRepositoryMock)
 			mockCache := new(domain.TransactionCacheRepositoryMock)
-			mockOCR := new(domain.OCRGatewayMock)
+			mockGemini := new(domain.GeminiSlipRepositoryMock)
 			mockLogger := logger.NewNopLogger()
 
 			ctx := context.Background()
 
-			tt.setupMock(mockRepo, mockCache, mockOCR)
+			tt.setupMock(mockRepo, mockCache)
 
-			uc := usecase.NewTransactionUsecase(mockRepo, mockCache, mockOCR, mockLogger)
+			uc := usecase.NewTransactionUsecase(mockRepo, mockCache, mockGemini, mockLogger)
 
 			// Act
 			result, err := uc.UpdateTransaction(ctx, tt.id, tt.input)
@@ -443,7 +441,6 @@ func TestUpdateTransaction(t *testing.T) {
 
 			mockRepo.AssertExpectations(t)
 			mockCache.AssertExpectations(t)
-			mockOCR.AssertExpectations(t)
 
 		})
 	}
@@ -452,20 +449,25 @@ func TestUpdateTransaction(t *testing.T) {
 func TestSyncTransaction(t *testing.T) {
 	ctx := context.Background()
 	fakeBytes := []byte("fake-image-data")
-	now := timeutil.NowInBangkok()
+	aiDate := "2006-01-02 15:04:05"
+	mockTime, _ := timeutil.ParseAISlipTime(aiDate)
 
 	tests := []struct {
 		name           string
 		imageBytes     []byte
 		localImageName string
-		setupMock      func(repo *domain.TransactionRepositoryMock, cache *domain.TransactionCacheRepositoryMock, ocr *domain.OCRGatewayMock)
+		setupMock      func(repo *domain.TransactionRepositoryMock, cache *domain.TransactionCacheRepositoryMock, gemini *domain.GeminiSlipRepositoryMock)
 		expectedAssert func(t *testing.T, result *domain.Transaction, err error)
 	}{
 		{
 			name:           "1. Early Short-Circuit - ไฟล์เคยประมวลผลแล้ว",
 			imageBytes:     fakeBytes,
 			localImageName: "already_done.jpg",
-			setupMock: func(repo *domain.TransactionRepositoryMock, cache *domain.TransactionCacheRepositoryMock, ocr *domain.OCRGatewayMock) {
+			setupMock: func(
+				repo *domain.TransactionRepositoryMock,
+				cache *domain.TransactionCacheRepositoryMock,
+				gemini *domain.GeminiSlipRepositoryMock,
+			) {
 				// จำลองว่า CheckFileExists เจอไฟล์นี้แล้ว (true,nil)
 				cache.On("CheckFileExists", ctx, "already_done.jpg").Return(true, nil)
 
@@ -477,19 +479,23 @@ func TestSyncTransaction(t *testing.T) {
 			},
 		},
 		{
-			name:           "2. OCR Extraction Failed - ส่งหา AI แล้วพัง",
+			name:           "2. Gemini Extraction Failed - ส่งหา AI แล้วพัง",
 			imageBytes:     fakeBytes,
 			localImageName: "new_slip.jpg",
-			setupMock: func(repo *domain.TransactionRepositoryMock, cache *domain.TransactionCacheRepositoryMock, ocr *domain.OCRGatewayMock) {
+			setupMock: func(
+				repo *domain.TransactionRepositoryMock,
+				cache *domain.TransactionCacheRepositoryMock,
+				gemini *domain.GeminiSlipRepositoryMock,
+			) {
 				cache.On("CheckFileExists", ctx, "new_slip.jpg").Return(false, nil)
 
 				// จำลองว่า AI คินค่า Error
-				ocr.On("Extract", ctx, fakeBytes).Return(nil, errors.New("google vision api error"))
+				gemini.On("ExtractData", ctx, fakeBytes).Return(nil, errors.New("gemini api error"))
 
 			},
 			expectedAssert: func(t *testing.T, result *domain.Transaction, err error) {
 				assert.Error(t, err)
-				assert.Contains(t, err.Error(), "ocr extraction failed")
+				assert.Contains(t, err.Error(), "gemini api error")
 				assert.Nil(t, result)
 			},
 		},
@@ -497,37 +503,41 @@ func TestSyncTransaction(t *testing.T) {
 			name:           "3. Success Path - ข้อมูลใหม่ทั้งหมด (ดักจับ Amount ติดลบด้วย)",
 			imageBytes:     fakeBytes,
 			localImageName: "perfact_slip.jpg",
-			setupMock: func(repo *domain.TransactionRepositoryMock, cache *domain.TransactionCacheRepositoryMock, ocr *domain.OCRGatewayMock) {
+			setupMock: func(
+				repo *domain.TransactionRepositoryMock,
+				cache *domain.TransactionCacheRepositoryMock,
+				gemini *domain.GeminiSlipRepositoryMock,
+			) {
 				cache.On("CheckFileExists", ctx, "perfact_slip.jpg").Return(false, nil)
 
-				// จำลองเคส OCR พ้น Amount ติดลบ (-50) เพื่อทดสอบตัว Fallback
-				mockOCRData := &domain.OCRData{
-					Amount:          -50,
-					ReceiverName:    "ร้านค้าทดสอบ",
-					TransactionDate: now,
+				mockSlipData := &domain.GeminiSlipData{
+					Amount:       200,
+					SenderName:   "ja",
+					ReceiverName: "Gash mach",
+					TransTime:    aiDate,
 				}
-				ocr.On("Extract", ctx, fakeBytes).Return(mockOCRData, nil)
+				gemini.On("ExtractData", ctx, fakeBytes).Return(mockSlipData, nil)
 
-				// ตรวจสอบข้อมูลที่จะลงฐานข้อมูล (ต้องเปลี่ยนจาก -50.00 เป็น 0.00)
+				// ตรวจสอบข้อมูลที่จะลงฐานข้อมูล
 				expectedTx := &domain.Transaction{
-					Amount:          0.00,
+					Amount:          200,
 					TransactionType: "EXPENSE",
-					ReceiverName:    "ร้านค้าทดสอบ",
+					ReceiverName:    "Gash mach",
 					LocalImageName:  "perfact_slip.jpg",
-					TransactionDate: now,
+					TransactionDate: mockTime,
 				}
 				repo.On("Insert", ctx, expectedTx).Return(nil)
 
 				// หลังเซฟเสร็จ ต้องทำ 2 อย่าง: เซ็ตไฟล์แคช และ ล้างแคชแดชบอร์ด
 				cache.On("SetFileCache", ctx, "perfact_slip.jpg").Return(nil)
 
-				periodKey := now.Format("summary:monthly:2006-01") // สร้าง Format "summary:monthly:YYYY-MM" ตามโค้ดจริง
+				periodKey := fmt.Sprintf("summary:monthly:%d-%02d", expectedTx.TransactionDate.Year(), expectedTx.TransactionDate.Month())
 				cache.On("InvalidateCache", ctx, periodKey).Return(nil)
 			},
 			expectedAssert: func(t *testing.T, result *domain.Transaction, err error) {
 				assert.NoError(t, err)
 				assert.NotNil(t, result)
-				assert.Equal(t, 0.0, result.Amount)
+				assert.Equal(t, float64(200), result.Amount)
 				assert.Equal(t, "EXPENSE", result.TransactionType)
 			},
 		},
@@ -535,24 +545,28 @@ func TestSyncTransaction(t *testing.T) {
 			name:           "4. Failed Insert to DB - ฐานข้อมูลมีปัญหา",
 			imageBytes:     fakeBytes,
 			localImageName: "perfect_slip.jpg",
-			setupMock: func(repo *domain.TransactionRepositoryMock, cache *domain.TransactionCacheRepositoryMock, ocr *domain.OCRGatewayMock) {
+			setupMock: func(
+				repo *domain.TransactionRepositoryMock,
+				cache *domain.TransactionCacheRepositoryMock,
+				gemini *domain.GeminiSlipRepositoryMock,
+			) {
 				cache.On("CheckFileExists", ctx, "perfect_slip.jpg").Return(false, nil)
 
-				// จำลองเคส OCR พ่น Amount ติดลบมา (-50.00) เพื่อทดสอบตัว Fallback ลอจิกในโค้ดคุณด้วย
-				mockOCRData := &domain.OCRData{
-					Amount:          -50.00,
-					ReceiverName:    "ร้านค้าทดสอบ",
-					TransactionDate: now,
+				mockSlipData := &domain.GeminiSlipData{
+					Amount:       200,
+					SenderName:   "ja",
+					ReceiverName: "Gash mach",
+					TransTime:    aiDate,
 				}
-				ocr.On("Extract", ctx, fakeBytes).Return(mockOCRData, nil)
+				gemini.On("ExtractData", ctx, fakeBytes).Return(mockSlipData, nil)
 
-				// ตรวจสอบข้อมูลที่จะลงฐานข้อมูล (ต้องเปลี่ยนจาก -50.00 เป็น 0.00 ตามลอจิกคุณ)
+				// ตรวจสอบข้อมูลที่จะลงฐานข้อมูล (ต้องเปลี่ยนจาก -50.00 เป็น 0.00)
 				expectedTx := &domain.Transaction{
-					Amount:          0.00, // โค้ดคุณเก่งมาก ดักเปลี่ยนติดลบให้เป็น 0.00 อัตโนมัติ
+					Amount:          200,
 					TransactionType: "EXPENSE",
-					ReceiverName:    "ร้านค้าทดสอบ",
+					ReceiverName:    "Gash mach",
 					LocalImageName:  "perfect_slip.jpg",
-					TransactionDate: now,
+					TransactionDate: mockTime,
 				}
 				repo.On("Insert", ctx, expectedTx).Return(errors.New("db error"))
 
@@ -569,12 +583,12 @@ func TestSyncTransaction(t *testing.T) {
 			// Attange
 			mockRepo := new(domain.TransactionRepositoryMock)
 			mockCache := new(domain.TransactionCacheRepositoryMock)
-			mockOCR := new(domain.OCRGatewayMock)
+			mockGemini := new(domain.GeminiSlipRepositoryMock)
 			mockLogger := logger.NewNopLogger()
 
-			tt.setupMock(mockRepo, mockCache, mockOCR)
+			tt.setupMock(mockRepo, mockCache, mockGemini)
 
-			txUsecase := usecase.NewTransactionUsecase(mockRepo, mockCache, mockOCR, mockLogger)
+			txUsecase := usecase.NewTransactionUsecase(mockRepo, mockCache, mockGemini, mockLogger)
 
 			// Act
 			result, err := txUsecase.SyncTransaction(ctx, tt.imageBytes, tt.localImageName)
@@ -585,7 +599,7 @@ func TestSyncTransaction(t *testing.T) {
 			// Verify
 			mockRepo.AssertExpectations(t)
 			mockCache.AssertExpectations(t)
-			mockOCR.AssertExpectations(t)
+			mockGemini.AssertExpectations(t)
 		})
 	}
 }
