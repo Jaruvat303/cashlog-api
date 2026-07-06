@@ -28,6 +28,10 @@ type Config struct {
 
 	// Google Cloud ProjectID
 	GCProjectID string
+
+	// gemini API
+	GeminiAPIKey string
+	ModelName    string
 }
 
 // LoadConfig ทำหน้าที่โหลดไฟล์ .env และแปลงค่ามาใส่ใน struct Config
@@ -49,6 +53,8 @@ func LoadConfig() *Config {
 		RedisUsename:      getEnv("REDIS_USERNAME", "default"),
 		RedisDB:           getEnvAsInt("REDIS_DB", 0),
 		GCProjectID:       getEnv("GOOGLE_CLOUD_PROJECT", ""),
+		GeminiAPIKey:      getEnv("GEMINI_API_KEY", ""),
+		ModelName:         getEnv("MODEL_NAME", ""),
 	}
 }
 

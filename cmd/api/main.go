@@ -8,7 +8,7 @@ import (
 	"github.com/Jaruvat303/cashlog/internal/delivery/http/middleware"
 	"github.com/Jaruvat303/cashlog/internal/delivery/http/router"
 	"github.com/Jaruvat303/cashlog/internal/delivery/http/v1/handler"
-	googleocr "github.com/Jaruvat303/cashlog/internal/gateway/google_ocr"
+	geminiClient "github.com/Jaruvat303/cashlog/internal/infrastructure/gemini"
 	"github.com/Jaruvat303/cashlog/internal/repository/postgres"
 	"github.com/Jaruvat303/cashlog/internal/repository/redis"
 	"github.com/Jaruvat303/cashlog/internal/usecase"
@@ -41,12 +41,16 @@ func main() {
 	// Dependency Injection
 	txRepository := postgres.NewGormTransactionRepository(db, appLogger)
 	cacheRepository := redis.NewRedisDashboardRepository(rdb)
-	googleVisionGateway := googleocr.NewGoogleOCRGateway()
+	geminiClient, err := geminiClient.NewClient(ctx, *cfg)
+	// gemini, err := gemini.NewGeminiSlipRepository(ctx, cfg.GeminiAPIKey)
+	// if err != nil {
+	// 	log.Printf("Warning: failed to connect gemini: %v", err)
+	// }
 
 	categoryRepository := postgres.NewGORMCategoryRepository(db, appLogger)
 
 	// Inject เลเยอร์นอกเข้าไปใน Layer Usecase
-	txUsecase := usecase.NewTransactionUsecase(txRepository, cacheRepository, googleVisionGateway, appLogger)
+	txUsecase := usecase.NewTransactionUsecase(txRepository, cacheRepository, geminiClient, appLogger)
 	catUsecase := usecase.NewCategoryUsecase(categoryRepository, appLogger)
 
 	// Inject Usecase เข้าไปใน Handler
