@@ -17,8 +17,17 @@ const slipScanPrompt = `คุณคือระบบอ่านข้อม�
 - amount: จำนวนเงินที่โอน (ตัวเลขล้วน ไม่มีคอมม่าหรือสัญลักษณ์สกุลเงิน)
 - sender_name: ชื่อบัญชีต้นทาง (ผู้โอน) ตามที่ปรากฏในสลิป
 - receiver_name: ชื่อบัญชีปลายทาง (ผู้รับเงิน) ตามที่ปรากฏในสลิป
-- trans_time: วันและเวลาที่ทำรายการ แปลงเป็นรูปแบบ string: "2006-01-02 15:04:05"
-  ถ้าสลิปแสดงเป็น พ.ศ. ให้แปลงเป็น ค.ศ. ก่อน (พ.ศ. - 543)
+- trans_time: วันและเวลาที่ทำรายการ แปลงเป็นรูปแบบ string: "YYYY-MM-DD HH:mm:ss" เท่านั้น
+
+กฎสำคัญสำหรับการแปลง trans_time (อ้างอิงปีปัจจุบัน พ.ศ. 2569 / ค.ศ. 2026):
+1. หากสลิปแสดงปีเป็น พ.ศ. ให้แปลงเป็น ค.ศ. ก่อนเสมอ โดยการลบด้วย 543 (เช่น ปี 2569 ต้องแปลงเป็น 2026, ปี 2568 แปลงเป็น 2025)
+2. รูปแบบผลลัพธ์ของเวลาต้องเป็น "YYYY-MM-DD HH:mm:ss" หากในสลิปไม่มีวินาที ให้เติม ":00" ต่อท้ายอัตโนมัติ
+
+ศึกษาและปฏิบัติตามตัวอย่างการแปลงเวลาด้านล่างนี้:
+- สลิปแสดง: "6 ก.ค. 69 18:30 น."   -> trans_time: "2026-07-06 18:30:00"
+- สลิปแสดง: "06 ก.ค. 2569 18:30"   -> trans_time: "2026-07-06 18:30:00"
+- สลิปแสดง: "06 Jul 2026, 18:30:15" -> trans_time: "2026-07-06 18:30:15"
+- สลิปแสดง: "2026/07/06 18:30"      -> trans_time: "2026-07-06 18:30:00"
  
 กฎสำคัญ:
 1. ถ้าฟิลด์ไหนอ่านไม่ออกหรือไม่มีในภาพ ให้ตอบค่าว่าง ("" สำหรับ string หรือ 0 สำหรับ number)
@@ -38,14 +47,17 @@ var slipResponseSchema = &genai.Schema{
 	Required: []string{"amount", "sender_name", "receiver_name", "trans_time"},
 }
 
-// ScanSlip ส่งภาพสลิปไปให้ Gemini อ่าน แล้วแปลงผลลัพธ์เป็น domain.GeminiSlipData
-//
-// method นี้คือ implementation ของ domain.SlipScanner interface
-// นั่นคือเหตุผลที่ signature ต้องตรงกับ interface เป๊ะๆ
+// ExtractData ส่งภาพสลิปไปให้ Gemini อ่าน แล้วแปลงผลลัพธ์เป็น domain.GeminiSlipData
+
 func (c *Client) ExtractData(ctx context.Context, imageBytes []byte) (*domain.GeminiSlipData, error) {
+	//ถ้าตั้งค่าสูงๆ (เช่น 1.0) AI จะตอบแบบมีความคิดสร้างสรรค์ มีจินตนาการ เดาคำศัพท์ใหม่ๆ
+	//ถ้าตั้งค่าต่ำสุดคือ 0.0 AI จะตัดความสร้างสรรค์ออกทั้งหมด แล้วเลือกตอบคำถามตามข้อเท็จจริงที่ตาเห็นจากภาพ 100% (Deterministic) ซึ่งจำเป็นมากๆ สำหรับงานอ่านเลขสลิปธนาคารเพื่อไม่ให้ AI มโนตัวเลขขึ้นมาเอง
+	temp := float32(0.0)
+
 	config := &genai.GenerateContentConfig{
 		ResponseMIMEType: "application/json",
 		ResponseSchema:   slipResponseSchema,
+		Temperature:      &temp,
 	}
 
 	contents := []*genai.Content{
@@ -70,12 +82,6 @@ func (c *Client) ExtractData(ctx context.Context, imageBytes []byte) (*domain.Ge
 	var data domain.GeminiSlipData
 	if err := json.Unmarshal([]byte(resp.Text()), &data); err != nil {
 		return nil, fmt.Errorf("gemini: failed to parse response json: %w", err)
-	}
-
-	// validate เบื้องต้นตรงนี้ก่อนส่งกลับไปให้ usecase
-	// เพื่อกัน case ที่ Gemini ตอบ JSON ถูก schema แต่ค่าไม่สมเหตุสมผล
-	if data.Amount <= 0 {
-		return nil, fmt.Errorf("gemini: invalid amount extracted: %v", data.Amount)
 	}
 
 	return &data, nil
