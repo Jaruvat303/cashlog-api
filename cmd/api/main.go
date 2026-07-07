@@ -57,6 +57,9 @@ func main() {
 	txhandler := handler.NewTransactionHandler(txUsecase, appLogger)
 	catHandler := handler.NewCategoryHandler(catUsecase, appLogger)
 
+	// Health Check Handler
+	healthHandler := handler.NewHealthHandler(db, rdb)
+
 	app := fiber.New(fiber.Config{
 		AppName:      "CashLog API v1.0",
 		ErrorHandler: router.NewGlobalErrorHandler(appLogger),
@@ -69,7 +72,7 @@ func main() {
 	app.Use(middleware.NewTimezoneMiddleware())          // ล็อกเวลาสากลในระบบให้เป็นเวลาไทยเสมอ
 
 	// ส่ง handler เพื่อสร้าง Http route
-	router.SetupRoutes(app, txhandler, catHandler)
+	router.SetupRoutes(app, txhandler, catHandler, healthHandler)
 
 	// 6. สั่งเปิดเซิร์ฟเวอร์รันระบบตามพอร์ตที่กำหนด
 	log.Printf("🚀 CashLog API runs smoothly on environment [%s]", cfg.AppEnv)
