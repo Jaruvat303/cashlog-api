@@ -10,11 +10,12 @@ func SetupRoutes(app *fiber.App, txHandler *handler.TransactionHandler, catHandl
 	// กำหนดและผูกเส้นทาง API Endpoint ตามสัญญา RESTful Spec
 	v1 := app.Group("/api/v1")
 
-	v1.Post("/log", txHandler.UplaodSlipAndLog)
-	v1.Get("/dashboard/summary", txHandler.GetDashboardSummary)
-	v1.Get("/transactions", txHandler.GetMonthlyHistory)
-	v1.Patch("/transactions/:id", txHandler.UpdateTransaction)
-	v1.Delete("/transactions/:id", txHandler.DeleteTransaction)
+	tx := v1.Group("/transactions")
+	tx.Get("/", txHandler.GetMonthlyHistory)
+	v1.Get("/summary", txHandler.GetDashboardSummary)
+	v1.Post("/upload-slip", txHandler.UplaodSlipAndLog)
+	tx.Patch("/:id", txHandler.UpdateTransaction)
+	tx.Delete("/:id", txHandler.DeleteTransaction)
 
 	cat := v1.Group("/categories")
 	cat.Post("/", catHandler.CreateCategory)
