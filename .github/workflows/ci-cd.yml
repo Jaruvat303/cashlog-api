@@ -79,7 +79,7 @@ jobs:
         uses: 'docker/login-action@v3' # docker/login-action@v3
         with:
           username: 'oauth2accesstoken'
-          password: '${{ steps.auth.outputs.auth_token }}'
+          password: '${{ steps.auth.outputs.access_token }}'
           registry: '${{ env.REGION }}-docker.pkg.dev'
 
       # 🏗️ สเต็ปสร้างกล่อง Docker และอัปโหลดขึ้น Cloud (ใช้ไฟล์ Dockerfile ที่คุณเตรียมไว้)
