@@ -71,6 +71,7 @@ jobs:
         uses: 'google-github-actions/auth@v2' # google-github-actions/auth@v2
         with:
           workload_identity_provider: '${{ env.WORKLOAD_IDENTITY_PROVIDER }}'
+          service_account: 'github-deployer@cashlog-api.iam.gserviceaccount.com'
 
       # 🐳 สเต็ปยืนยันตัวตนกับคลังเก็บ Docker Image (Artifact Registry) ด้วย Token ความเร็วสูง
       - name: 'Docker Auth to Artifact Registry'
