@@ -17,21 +17,29 @@ RUN go mod download
 # คัดลอกโค้ดทั้งหมดในโปรเจกต์เข้ามา
 COPY . .
 
-# 🌟 คอมไพล์โค้ดให้กลายเป็นไฟล์ไบนารีเดี่ยวตัวเดียว (ปิดการใช้ CGO เพื่อให้รันข้ามสถาปัตยกรรมได้อย่างเสถียร)
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-w -s" -o cashlog-api ./cmd/api/main.go
+#  คอมไพล์โค้ดให้กลายเป็นไฟล์ไบนารีเดี่ยวตัวเดียว รองรับ Multi-Architecture (เช่น ARM64 หรือ AMD64) ป้องกันการล็อกสเปกเครื่องปลายทาง
+ARG TARGETOS
+ARG TARGETARCH
+RUN CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH:-amd64} \
+    go build -ldflags="-w -s" -o cashlog-api ./cmd/api/main.go
 
 # ==========================================
 # Stage 2: Final stage (สร้าง Container ตัวจริงที่น้ำหนักเบา)
 # ==========================================
-FROM alpine:3.19
+FROM alpine:3.20
 
 RUN apk --no-cache add ca-certificates tzdata
 
-# 🌟 เปลี่ยนจาก /root/ เป็น /app เพื่อความเป็นสากลและจัดการง่าย
+# สร้าง Non-root User/Group มารองรับการรันแอป (ห้ามใช้สิทธิ์ Root รันบน Production)
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+
 WORKDIR /app
 
 # คัดลอกเฉพาะไฟล์ Binary ที่คอมไพล์เสร็จแล้วมาจาก Stage 1
 COPY --from=builder /app/cashlog-api .
+
+# สั่งให้ Container สลับไปใช้สิทธิ์ Non-root user ทันที
+USER appuser
 
 # เปิดพอร์ตที่ Go Fiber ใช้
 EXPOSE 8080
