@@ -72,6 +72,7 @@ jobs:
         with:
           workload_identity_provider: '${{ env.WORKLOAD_IDENTITY_PROVIDER }}'
           service_account: 'github-deployer@cashlog-api.iam.gserviceaccount.com'
+          token_format: 'access_token'
 
       # 🐳 สเต็ปยืนยันตัวตนกับคลังเก็บ Docker Image (Artifact Registry) ด้วย Token ความเร็วสูง
       - name: 'Docker Auth to Artifact Registry'
