@@ -368,7 +368,7 @@ func TestUpdateTransaction(t *testing.T) {
 		expectedError  bool
 	}{
 		{
-			name:  "1. Database Failure - ไม่สามารถหาข้อมูล​ Transaction จาก ID ได้",
+			name:  "1. Database Failure - ไม่สามารถหาข้อมูล Transaction จาก ID ได้",
 			id:    uint(99),
 			input: mockInput,
 			setupMock: func(repo *domain.TransactionRepositoryMock, cache *domain.TransactionCacheRepositoryMock) {
