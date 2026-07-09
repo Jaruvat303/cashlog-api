@@ -368,7 +368,7 @@ func TestUpdateTransaction(t *testing.T) {
 		expectedError  bool
 	}{
 		{
-			name:  "1. Database Filure - ไม่สามารถหาข้อมูล​ Transaction จาก ID ได้",
+			name:  "1. Database Failure - ไม่สามารถหาข้อมูล​ Transaction จาก ID ได้",
 			id:    uint(99),
 			input: mockInput,
 			setupMock: func(repo *domain.TransactionRepositoryMock, cache *domain.TransactionCacheRepositoryMock) {
@@ -521,7 +521,7 @@ func TestSyncTransaction(t *testing.T) {
 				// ตรวจสอบข้อมูลที่จะลงฐานข้อมูล
 				expectedTx := &domain.Transaction{
 					Amount:          200,
-					TransactionType: "EXPENSE",
+					TransactionType: "expense",
 					ReceiverName:    "Gash mach",
 					LocalImageName:  "perfact_slip.jpg",
 					TransactionDate: mockTime,
@@ -538,7 +538,7 @@ func TestSyncTransaction(t *testing.T) {
 				assert.NoError(t, err)
 				assert.NotNil(t, result)
 				assert.Equal(t, float64(200), result.Amount)
-				assert.Equal(t, "EXPENSE", result.TransactionType)
+				assert.Equal(t, "expense", result.TransactionType)
 			},
 		},
 		{
@@ -563,7 +563,7 @@ func TestSyncTransaction(t *testing.T) {
 				// ตรวจสอบข้อมูลที่จะลงฐานข้อมูล (ต้องเปลี่ยนจาก -50.00 เป็น 0.00)
 				expectedTx := &domain.Transaction{
 					Amount:          200,
-					TransactionType: "EXPENSE",
+					TransactionType: "expense",
 					ReceiverName:    "Gash mach",
 					LocalImageName:  "perfect_slip.jpg",
 					TransactionDate: mockTime,

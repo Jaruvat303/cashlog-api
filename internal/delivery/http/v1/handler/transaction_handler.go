@@ -46,7 +46,9 @@ func (h *TransactionHandler) UplaodSlipAndLog(c *fiber.Ctx) error {
 	if err != nil {
 		return fmt.Errorf("failed to open file image: %w", err)
 	}
-	defer file.Close()
+	defer func() {
+		_ = file.Close()
+	}()
 
 	imageBytes, err := io.ReadAll(file)
 	if err != nil {
