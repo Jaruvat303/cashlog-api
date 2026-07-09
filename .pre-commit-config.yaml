@@ -1,0 +1,15 @@
+# .pre-commit-config.yaml
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0 # ใช้เวอร์ชันล่าสุด ณ ปัจจุบัน
+    hooks:
+      - id: trailing-whitespace  # ลบช่องว่างท้ายบรรทัดที่ไม่ได้ใช้
+      - id: end-of-file-fixer    # เช็คให้แน่ใจว่าไฟล์จบด้วยการขึ้นบรรทัดใหม่
+      - id: check-yaml           # ตรวจสอบไวยากรณ์ไฟล์ YAML
+
+  - repo: https://github.com/dnephin/pre-commit-golang
+    rev: v0.5.1
+    hooks:
+      - id: go-fmt      # จัดฟอร์แมตโค้ดอัตโนมัติด้วย gofmt
+      - id: go-imports  # จัดการเรื่องการ import packages ให้สะอาด
+      - id: golangci-lint # สแกนหา Bug, Performance issues และ Code smells (ต้องติดตั้ง golangci-lint บนเครื่องด้วย)

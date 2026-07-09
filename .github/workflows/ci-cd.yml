@@ -1,0 +1,105 @@
+name: 'Cashlog API - CI/CD Pipeline'
+
+# 1. กำหนดเหตุการณ์ที่จะสั่งให้ Pipeline ทำงาน
+on:
+  push:
+    branches:
+      - main
+      - develop
+  pull_request:
+    branches:
+      - main
+      - develop
+
+# 2. ตั้งค่าตัวแปรส่วนกลาง (Global Env) สำหรับใช้งานในพาร์ท CD
+env:
+  PROJECT_ID: 'cashlog-api'               # ✏️ เปลี่ยนเป็น Project ID ของคุณบน GCP
+  REGION: 'asia-southeast1'                       # ✏️ แนะนำโซนสิงคโปร์ ใกล้และเสถียรที่สุดสำหรับไทย
+  SERVICE: 'cashlog-api'                          # ✏️ ชื่อบริการ Cloud Run ของคุณ
+  WORKLOAD_IDENTITY_PROVIDER: 'projects/501276653507/locations/global/workloadIdentityPools/github-final-pool/providers/github-final-provider' # ✏️ ใส่ค่าหลังจากตั้งค่า WIF บน GCP เสร็จ
+
+jobs:
+  # =========================================================
+  # JOBที่ 1: Continuous Integration (CI) - ตรวจคุณภาพโค้ด
+  # =========================================================
+  continuous-integration:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 'Checkout Code'
+        uses: 'actions/checkout@v4'
+
+      - name: 'Setup Go Environment'
+        uses: 'actions/setup-go@v5' # actions/setup-go@v5
+        with:
+          go-version: '1.25.0' # อิงตามเวอร์ชันใน Dockerfile ของคุณ
+          cache: true          # เปิดระบบ Cache ของ Go เพื่อให้บิลด์เร็วขึ้นในรอบถัดไป
+
+      - name: 'Install Dependencies'
+        run: go mod download
+
+      - name: 'Run Linter (golangci-lint)'
+        uses: 'golangci/golangci-lint-action@v6' # golangci-lint-action@v6
+        with:
+          version: latest
+
+      - name: 'Run Unit Tests'
+        run: |
+          go test -v -race -covermode=atomic ./...
+
+  # =========================================================
+  # JOBที่ 2: Continuous Deployment (CD) - บิลด์และส่งโค้ดขึ้นระบบจริง
+  # =========================================================
+  continuous-deployment:
+    name: 'Deploy to Google Cloud Run'
+    needs: continuous-integration # 🛑 ต้องผ่านด่าน Job CI ข้างบนก่อน ถึงจะยอมให้ทำขั้นตอนนี้
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push' # 🔒 รันเฉพาะตอนโค้ดถูก merge เข้า main เท่านั้น
+    runs-on: ubuntu-latest
+
+    # กำหนดสิทธิ์ให้ GitHub ออก Token ไปแลกตั๋วชั่วคราวจาก GCP
+    permissions:
+      contents: 'read'
+      id-token: 'write'
+
+    steps:
+      - name: 'Checkout Code'
+        uses: 'actions/checkout@v4'
+
+      # 🔑 สเต็ปแลกตั๋วผ่านประตูด้วยระบบ OIDC (ไม่ใช้ JSON Key ตัวเต็ม)
+      - id: 'auth'
+        name: 'Authenticate to Google Cloud'
+        uses: 'google-github-actions/auth@v2' # google-github-actions/auth@v2
+        with:
+          workload_identity_provider: '${{ env.WORKLOAD_IDENTITY_PROVIDER }}'
+
+      # 🐳 สเต็ปยืนยันตัวตนกับคลังเก็บ Docker Image (Artifact Registry) ด้วย Token ความเร็วสูง
+      - name: 'Docker Auth to Artifact Registry'
+        uses: 'docker/login-action@v3' # docker/login-action@v3
+        with:
+          username: 'oauth2accesstoken'
+          password: '${{ steps.auth.outputs.auth_token }}'
+          registry: '${{ env.REGION }}-docker.pkg.dev'
+
+      # 🏗️ สเต็ปสร้างกล่อง Docker และอัปโหลดขึ้น Cloud (ใช้ไฟล์ Dockerfile ที่คุณเตรียมไว้)
+      - name: 'Build and Push Container Image'
+        run: |
+          DOCKER_TAG="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.SERVICE }}:${{ github.sha }}"
+          docker build --tag "${DOCKER_TAG}" .
+          docker push "${DOCKER_TAG}"
+
+      # 🚀 สเต็ปสั่งการให้ Cloud Run สลับไปใช้ Image ตัวใหม่ล่าสุดแบบไม่มีสถิติระบบล่ม (Zero Downtime)
+      - id: 'deploy'
+        name: 'Deploy to Cloud Run'
+        uses: 'google-github-actions/deploy-cloudrun@v2' # google-github-actions/deploy-cloudrun@v2
+        with:
+          service: '${{ env.SERVICE }}'
+          region: '${{ env.REGION }}'
+          image: '${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.SERVICE }}:${{ github.sha }}'
+          # 💡 แนะนำ: ส่งตัวแปรให้ Go/Fiber ใช้ตอนรันบน Cloud Run จริงที่นี่ได้เลย
+          env_vars: |
+            APP_ENV=production
+            LOG_LEVEL=info
+
+      # 🎯 พ่น URL ของ API ตัวจริงออกมาแสดงผลบนหน้าจอเมื่อ Deploy สำเร็จ
+      - name: 'Show Production URL Output'
+        run: |
+          echo "🚀 ความยินดีด้วย! API ของคุณออนไลน์แล้วที่ URL: ${{ steps.deploy.outputs.url }}"
