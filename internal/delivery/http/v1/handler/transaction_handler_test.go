@@ -165,7 +165,7 @@ func TestGetMonthlyHistory(t *testing.T) {
 			assert.Equal(t, tt.expectedStatus, resp.StatusCode)
 
 			// Assert ตรวจสอบ ResponseBody
-			bodyByte, err := io.ReadAll(resp.Body)
+			bodyByte, _ := io.ReadAll(resp.Body)
 			bodyStr := string(bodyByte)
 			assert.Contains(t, bodyStr, tt.expectedBody)
 
@@ -287,7 +287,7 @@ func TestUpdateTransaction(t *testing.T) {
 			assert.Equal(t, resp.StatusCode, tt.expectedStatus)
 
 			// Assert Response Body
-			bodyByte, err := io.ReadAll(resp.Body)
+			bodyByte, _ := io.ReadAll(resp.Body)
 			bodyStr := string(bodyByte)
 			assert.Contains(t, bodyStr, tt.expectedBody)
 
@@ -358,7 +358,7 @@ func TestDeleteTransaction(t *testing.T) {
 			assert.Equal(t, resp.StatusCode, tt.expectedStatus)
 
 			// Assert Response Body
-			bodyByte, err := io.ReadAll(resp.Body)
+			bodyByte, _ := io.ReadAll(resp.Body)
 			bodyStr := string(bodyByte)
 			assert.Contains(t, bodyStr, tt.expectedBody)
 

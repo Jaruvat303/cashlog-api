@@ -15,6 +15,7 @@ import (
 	"github.com/Jaruvat303/cashlog/pkg/database"
 	"github.com/Jaruvat303/cashlog/pkg/logger"
 	"github.com/gofiber/fiber/v2"
+	"go.uber.org/zap"
 )
 
 func main() {
@@ -35,17 +36,16 @@ func main() {
 	// Create Seed Category Data
 	err := database.SeedCategories(ctx, db)
 	if err != nil {
-		log.Printf("Warning: failed to seed categories: %v", err)
+		appLogger.Fatal("Warning: failed to seed categories: ", zap.Error(err))
 	}
 
 	// Dependency Injection
 	txRepository := postgres.NewGormTransactionRepository(db, appLogger)
 	cacheRepository := redis.NewRedisDashboardRepository(rdb)
 	geminiClient, err := geminiClient.NewClient(ctx, *cfg)
-	// gemini, err := gemini.NewGeminiSlipRepository(ctx, cfg.GeminiAPIKey)
-	// if err != nil {
-	// 	log.Printf("Warning: failed to connect gemini: %v", err)
-	// }
+	if err != nil {
+		appLogger.Fatal("Warning: failed to create geminiClient: ", zap.Error(err))
+	}
 
 	categoryRepository := postgres.NewGORMCategoryRepository(db, appLogger)
 
