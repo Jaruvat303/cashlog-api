@@ -15,6 +15,7 @@ import (
 	"github.com/Jaruvat303/cashlog/internal/domain"
 	"github.com/Jaruvat303/cashlog/pkg"
 	"github.com/Jaruvat303/cashlog/pkg/logger"
+	"github.com/Jaruvat303/cashlog/pkg/timeutil"
 	"github.com/gofiber/fiber/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -175,7 +176,7 @@ func TestGetMonthlyHistory(t *testing.T) {
 }
 
 func TestUpdateTransaction(t *testing.T) {
-	fixedTime := time.Date(2026, time.June, 19, 16, 0, 0, 0, time.Local)
+	fixedTime := time.Date(2026, time.June, 19, 16, 0, 0, 0, timeutil.BangKokLoc)
 
 	// ข้อมูลเข้า usecase
 	validInput := dto.UpdateTransactionInput{
