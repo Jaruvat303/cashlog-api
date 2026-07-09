@@ -239,7 +239,12 @@ func TestUpdateTransaction(t *testing.T) {
 			paramID:     "1",
 			requestBody: validInput,
 			setupMock: func(uc *domain.TransactionUsecaseMock) {
-				uc.On("UpdateTransaction", mock.Anything, uint(1), validInput).Return(nil, domain.ErrInternalDB)
+				uc.On("UpdateTransaction", mock.Anything, uint(1), mock.MatchedBy(func(input dto.UpdateTransactionInput) bool {
+					// แกะค่าข้างใน Pointer ออกมาเทียบกันตรง ๆ
+					return input.Amount != nil && *input.Amount == 200.0 &&
+						input.Note != nil && *input.Note == "edit amount" &&
+						input.CategoryID != nil && *input.CategoryID == 3
+				})).Return(nil, domain.ErrInternalDB)
 			},
 			expectedStatus: fiber.StatusInternalServerError,
 			expectedBody:   "internal database error",
@@ -249,7 +254,12 @@ func TestUpdateTransaction(t *testing.T) {
 			paramID:     "1",
 			requestBody: validInput,
 			setupMock: func(uc *domain.TransactionUsecaseMock) {
-				uc.On("UpdateTransaction", mock.Anything, uint(1), validInput).Return(mockResult, nil)
+				uc.On("UpdateTransaction", mock.Anything, uint(1), mock.MatchedBy(func(input dto.UpdateTransactionInput) bool {
+					// แกะค่าข้างใน Pointer ออกมาเทียบกันตรง ๆ
+					return input.Amount != nil && *input.Amount == 200.0 &&
+						input.Note != nil && *input.Note == "edit amount" &&
+						input.CategoryID != nil && *input.CategoryID == 3
+				})).Return(mockResult, nil)
 			},
 			expectedStatus: fiber.StatusOK,
 			expectedBody:   `"success":true`,
