@@ -85,7 +85,7 @@ jobs:
       # 🏗️ สเต็ปสร้างกล่อง Docker และอัปโหลดขึ้น Cloud (ใช้ไฟล์ Dockerfile ที่คุณเตรียมไว้)
       - name: 'Build and Push Container Image'
         run: |
-          DOCKER_TAG="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.SERVICE }}:${{ github.sha }}"
+          DOCKER_TAG="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.SERVICE }}/${{ env.SERVICE }}:${{ github.sha }}"
           docker build --tag "${DOCKER_TAG}" .
           docker push "${DOCKER_TAG}"
 
@@ -96,7 +96,7 @@ jobs:
         with:
           service: '${{ env.SERVICE }}'
           region: '${{ env.REGION }}'
-          image: '${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.SERVICE }}:${{ github.sha }}'
+          image: ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.SERVICE }}/${{ env.SERVICE }}:${{ github.sha }}
           # 💡 แนะนำ: ส่งตัวแปรให้ Go/Fiber ใช้ตอนรันบน Cloud Run จริงที่นี่ได้เลย
           env_vars: |
             APP_ENV=production
