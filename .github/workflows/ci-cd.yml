@@ -41,6 +41,7 @@ jobs:
         uses: 'golangci/golangci-lint-action@v6' # golangci-lint-action@v6
         with:
           version: latest
+          install-mode: goinstall
 
       - name: 'Run Unit Tests'
         run: |
