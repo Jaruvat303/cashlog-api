@@ -97,7 +97,7 @@ jobs:
           service: '${{ env.SERVICE }}'
           region: '${{ env.REGION }}'
           image: ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.SERVICE }}/${{ env.SERVICE }}:${{ github.sha }}
-          # 💡 แนะนำ: ส่งตัวแปรให้ Go/Fiber ใช้ตอนรันบน Cloud Run จริงที่นี่ได้เลย
+          flags: '--allow-unauthenticated'
           env_vars: |
             APP_ENV=production
             LOG_LEVEL=info
