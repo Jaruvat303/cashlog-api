@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/Jaruvat303/cashlog/internal/delivery/http/v1/dto"
 	"github.com/Jaruvat303/cashlog/internal/domain"
 	"github.com/Jaruvat303/cashlog/pkg/logger"
 	"github.com/Jaruvat303/cashlog/pkg/timeutil"
@@ -60,7 +59,7 @@ func (t *transactionUsecase) DeleteTransaction(ctx context.Context, id uint) err
 }
 
 // UpdateTransaction implements [domain.TransactionUsecase].
-func (t *transactionUsecase) UpdateTransaction(ctx context.Context, id uint, input dto.UpdateTransactionInput) (*domain.Transaction, error) {
+func (t *transactionUsecase) UpdateTransaction(ctx context.Context, id uint, input domain.UpdateTransactionParam) (*domain.Transaction, error) {
 	log := logger.Ctx(ctx)
 	if log == nil {
 		// ให้หันไปใช้ Logger ตัวที่สืบทอดมาจาก Constructor แทน ป้องกันแอปพัง (Panic)

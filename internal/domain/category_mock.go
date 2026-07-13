@@ -3,7 +3,6 @@ package domain
 import (
 	"context"
 
-	"github.com/Jaruvat303/cashlog/internal/delivery/http/v1/dto"
 	"github.com/stretchr/testify/mock"
 )
 
@@ -48,9 +47,12 @@ type CategoryUsecaseMock struct {
 	mock.Mock
 }
 
-func (m *CategoryUsecaseMock) CreateCategory(ctx context.Context, input dto.CreateCategoryInput) error {
+func (m *CategoryUsecaseMock) CreateCategory(ctx context.Context, input CreateCategoryParam) (*Category, error) {
 	args := m.Called(ctx, input)
-	return args.Error(0)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*Category), args.Error(1)
 }
 func (m *CategoryUsecaseMock) GetCategoryByID(ctx context.Context, id uint) (*Category, error) {
 	args := m.Called(ctx, id)
@@ -66,7 +68,7 @@ func (m *CategoryUsecaseMock) FetchCategoriesByType(ctx context.Context, types s
 	}
 	return args.Get(0).([]Category), args.Error(1)
 }
-func (m *CategoryUsecaseMock) UpdateCategory(ctx context.Context, id uint, input dto.UpdateCategoryInput) (*Category, error) {
+func (m *CategoryUsecaseMock) UpdateCategory(ctx context.Context, id uint, input UpdateCategoryParam) (*Category, error) {
 	args := m.Called(ctx, id, input)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)

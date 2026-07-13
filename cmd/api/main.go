@@ -18,6 +18,16 @@ import (
 	"go.uber.org/zap"
 )
 
+// @title CashLog API
+// @version 1.0
+// @description API บริการหลังบ้านสำหรับจัดการบันทึกรายรับรายจ่ายและวิเคราะห์สลิปด้วย Gemini AI
+// @termsOfService http://swagger.io/terms/
+
+// @contact.name API Support
+// @contact.email jaruvat.see@gmail.com
+
+// @BasePath /
+
 func main() {
 	// Load Config
 	cfg := config.LoadConfig()

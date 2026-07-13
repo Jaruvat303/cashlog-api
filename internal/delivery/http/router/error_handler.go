@@ -3,6 +3,7 @@ package router
 import (
 	"errors"
 
+	"github.com/Jaruvat303/cashlog/internal/delivery/http/v1/dto"
 	"github.com/Jaruvat303/cashlog/internal/domain"
 	"github.com/Jaruvat303/cashlog/pkg/logger"
 	"github.com/gofiber/fiber/v2"
@@ -71,10 +72,10 @@ func NewGlobalErrorHandler(appLogger logger.Logger) fiber.ErrorHandler {
 		}
 
 		// ส่ง JSON มาตรฐานกลับไปหาหน้าบ้าน
-		return c.Status(statusCode).JSON(fiber.Map{
-			"success":    false,
-			"error_code": errorCode,
-			"message":    clientMessage,
+		return c.Status(statusCode).JSON(dto.ErrorResponseDTO{
+			Success:   false,
+			ErrorCode: errorCode,
+			Message:   clientMessage,
 		})
 	}
 }

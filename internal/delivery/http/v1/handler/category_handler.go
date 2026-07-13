@@ -6,6 +6,7 @@ import (
 	"github.com/Jaruvat303/cashlog/internal/delivery/http/v1/dto"
 	"github.com/Jaruvat303/cashlog/internal/domain"
 	"github.com/Jaruvat303/cashlog/pkg/logger"
+	"github.com/Jaruvat303/cashlog/pkg/response"
 	"github.com/Jaruvat303/cashlog/pkg/validate"
 	"github.com/gofiber/fiber/v2"
 )
@@ -22,6 +23,17 @@ func NewCategoryHandler(usecase domain.CategoryUsecase, appLogger logger.Logger)
 	}
 }
 
+// CreateCategory godoc
+// @Summary สร้าง Category ใหม่
+// @Description สร้าง Category ใหม่ โดยต้องระบุชื่อและประเภทของ Category
+// @Tags Category
+// @Accept json
+// @Produce json
+// @Param input body dto.CreateCategoryInput true "ข้อมูลสำหรับสร้าง Category"
+// @Success 201 {object} response.JSONResponse[dto.CategoryResponse] "สร้าง Category สำเร็จ"
+// @Failure 400 {object} dto.ErrorResponse "invalid request body หรือ validate struct error body"
+// @Failure 500 {object} dto.ErrorResponse "Something went wrong, please try again later."
+// @Router /categories [post]
 func (h *CategoryHandler) CreateCategory(c *fiber.Ctx) error {
 	ctx := c.UserContext()
 
@@ -37,16 +49,30 @@ func (h *CategoryHandler) CreateCategory(c *fiber.Ctx) error {
 	}
 
 	// เรียกงาน usecase
-	if err := h.usecase.CreateCategory(ctx, input); err != nil {
+	category, err := h.usecase.CreateCategory(ctx, input.ToDomainCreateParam())
+	if err != nil {
 		return err
 	}
 
-	return c.Status(fiber.StatusCreated).JSON(fiber.Map{
-		"success": true,
-		"message": "create category successfull",
-	})
+	// แปลงข้อมูลจาก Domain เป็น DTO Response
+	dtoResponse := dto.MapToCategoryResponse(category)
+
+	return response.Success(c, fiber.StatusCreated, "create category successfull", dtoResponse)
 }
 
+// UpdateCategory godoc
+// @Summary อัปเดต Category
+// @Description อัปเดตข้อมูล Category โดยต้องระบุ ID ของ Category ที่ต้องการอัปเดต
+// @Tags Category
+// @Accept json
+// @Produce json
+// @Param id path int true "ID ของ Category ที่ต้องการอัปเดต"
+// @Param input body dto.UpdateCategoryInput true "ข้อมูลสำหรับอัปเดต Category"
+// @Success 200 {object} response.JSONResponse[dto.CategoryResponse] "อัปเดต Category สำเร็จ"
+// @Failure 400 {object} dto.ErrorResponse "invalid request body หรือ validate struct error body"
+// @Failure 404 {object} dto.ErrorResponse "The requested data was not found"
+// @Failure 500 {object} dto.ErrorResponse "Something went wrong, please try again later."
+// @Router /categories/{id} [put]
 func (h *CategoryHandler) UpdateCategory(c *fiber.Ctx) error {
 	ctx := c.UserContext()
 
@@ -68,18 +94,29 @@ func (h *CategoryHandler) UpdateCategory(c *fiber.Ctx) error {
 	}
 
 	// เรียกใช้งาน usecase
-	category, err := h.usecase.UpdateCategory(ctx, uint(id), input)
+	category, err := h.usecase.UpdateCategory(ctx, uint(id), input.ToDomainUpdateParam())
 	if err != nil {
 		return err
 	}
 
-	return c.Status(fiber.StatusOK).JSON(fiber.Map{
-		"success": true,
-		"message": "update category successfull",
-		"data":    category,
-	})
+	// แปลงข้อมูลจาก Domain เป็น DTO Response
+	dtoResponse := dto.MapToCategoryResponse(category)
+
+	return response.Success(c, fiber.StatusOK, "update category successfull", dtoResponse)
 }
 
+// DeleteCategory godoc
+// @Summary ลบ Category
+// @Description ลบ Category โดยต้องระบุ ID ของ Category ที่ต้องการลบ
+// @Tags Category
+// @Accept json
+// @Produce json
+// @Param id path int true "ID ของ Category ที่ต้องการลบ"
+// @Success 200 {object} response.JSONResponse[any] "ลบ Category สำเร็จ"
+// @Failure 400 {object} dto.ErrorResponse "invalid request body หรือ validate struct error body"
+// @Failure 404 {object} dto.ErrorResponse "The requested data was not found"
+// @Failure 500 {object} dto.ErrorResponse "Something went wrong, please try again later."
+// @Router /categories/{id} [delete]
 func (h *CategoryHandler) DeleteCategory(c *fiber.Ctx) error {
 	ctx := c.UserContext()
 
@@ -95,13 +132,21 @@ func (h *CategoryHandler) DeleteCategory(c *fiber.Ctx) error {
 		return err
 	}
 
-	return c.Status(fiber.StatusOK).JSON(fiber.Map{
-		"success": true,
-		"message": "delete category successfull",
-	})
+	return response.OkMessage(c, fiber.StatusOK, "delete category successfull")
 
 }
 
+// FetchCategoriesByType godoc
+// @Summary ดึงข้อมูล Category ตามประเภท
+// @Description ดึงข้อมูล Category ตามประเภท โดยต้องระบุประเภทของ Category (income หรือ expense)
+// @Tags Category
+// @Accept json
+// @Produce json
+// @Param type query string false "ประเภทของ Category" Enums(income, expense) default(expense)
+// @Success 200 {object} response.JSONResponse[[]dto.CategoryResponse] "ดึงข้อมูล Category สำเร็จ"
+// @Failure 400 {object} dto.ErrorResponse "invalid types parameter"
+// @Failure 500 {object} dto.ErrorResponse "Something went wrong, please try again later."
+// @Router /categories [get]
 func (h *CategoryHandler) FetchCategoriesByType(c *fiber.Ctx) error {
 	ctx := c.UserContext()
 
@@ -116,8 +161,8 @@ func (h *CategoryHandler) FetchCategoriesByType(c *fiber.Ctx) error {
 		return err
 	}
 
-	return c.Status(fiber.StatusOK).JSON(fiber.Map{
-		"success": true,
-		"data":    categories,
-	})
+	// แปลงข้อมูลจาก Domain เป็น DTO Response
+	dtoCategories := dto.MapToCategoryListResponse(categories)
+
+	return response.Success(c, fiber.StatusOK, "FetchCategoriesByType successfull", dtoCategories)
 }

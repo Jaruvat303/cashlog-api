@@ -4,7 +4,6 @@ import (
 	"context"
 	"time"
 
-	"github.com/Jaruvat303/cashlog/internal/delivery/http/v1/dto"
 	"github.com/stretchr/testify/mock"
 )
 
@@ -37,7 +36,7 @@ func (m *TransactionUsecaseMock) GetDashboardSummary(ctx context.Context, scope 
 	return args.Get(0).(*DashboardSummary), args.Error(1)
 }
 
-func (m *TransactionUsecaseMock) UpdateTransaction(ctx context.Context, id uint, input dto.UpdateTransactionInput) (*Transaction, error) {
+func (m *TransactionUsecaseMock) UpdateTransaction(ctx context.Context, id uint, input UpdateTransactionParam) (*Transaction, error) {
 	args := m.Called(ctx, id, input)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)

@@ -145,7 +145,7 @@ func (h *TransactionHandler) UpdateTransaction(c *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusBadRequest, "validation struct error")
 	}
 
-	result, err := h.txUsecase.UpdateTransaction(ctx, uint(id), input)
+	result, err := h.txUsecase.UpdateTransaction(ctx, uint(id), input.ToDomainUpdateParam())
 	if err != nil {
 		return err
 	}

@@ -3,8 +3,6 @@ package domain
 import (
 	"context"
 	"time"
-
-	"github.com/Jaruvat303/cashlog/internal/delivery/http/v1/dto"
 )
 
 type Transaction struct {
@@ -46,6 +44,13 @@ type TransactionUsecase interface {
 	SyncTransaction(ctx context.Context, imageBytes []byte, localImageName string) (*Transaction, error)
 	GetMonthlyHistory(ctx context.Context, month, year int) ([]Transaction, error)
 	GetDashboardSummary(ctx context.Context, scope string, month, year int) (*DashboardSummary, error)
-	UpdateTransaction(ctx context.Context, id uint, input dto.UpdateTransactionInput) (*Transaction, error)
+	UpdateTransaction(ctx context.Context, id uint, input UpdateTransactionParam) (*Transaction, error)
 	DeleteTransaction(ctx context.Context, id uint) error
+}
+
+type UpdateTransactionParam struct {
+	Amount          *float64
+	Note            *string
+	CategoryID      *int64
+	TransactionDate *time.Time
 }

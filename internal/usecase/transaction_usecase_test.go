@@ -8,7 +8,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Jaruvat303/cashlog/internal/delivery/http/v1/dto"
 	"github.com/Jaruvat303/cashlog/internal/domain"
 	"github.com/Jaruvat303/cashlog/internal/usecase"
 	"github.com/Jaruvat303/cashlog/pkg"
@@ -338,7 +337,7 @@ func TestDeleteTransaction(t *testing.T) {
 func TestUpdateTransaction(t *testing.T) {
 	// 1. กำหนดเวลาคงที่ (Fixed Time) ไว้ที่ด้านบนสุด
 	fixedTime := time.Date(2026, time.June, 19, 16, 0, 0, 0, time.Local)
-	mockInput := dto.UpdateTransactionInput{
+	mockInput := domain.UpdateTransactionParam{
 		Amount:          pkg.PTR(200.0),
 		Note:            pkg.PTR("edit amount"),
 		CategoryID:      pkg.PTR(int64(3)),
@@ -362,7 +361,7 @@ func TestUpdateTransaction(t *testing.T) {
 	tests := []struct {
 		name           string
 		id             uint
-		input          dto.UpdateTransactionInput
+		input          domain.UpdateTransactionParam
 		setupMock      func(repo *domain.TransactionRepositoryMock, cache *domain.TransactionCacheRepositoryMock)
 		expectedResult *domain.Transaction
 		expectedError  bool
