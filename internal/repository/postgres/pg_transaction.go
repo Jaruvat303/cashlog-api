@@ -26,7 +26,7 @@ func (g *gormTransactionRepository) Delete(ctx context.Context, id uint) error {
 // GetByID implements [domain.TransactionRepository].
 func (g *gormTransactionRepository) GetByID(ctx context.Context, id uint) (*domain.Transaction, error) {
 	var tx domain.Transaction
-	err := g.db.WithContext(ctx).First(&tx, id).Error
+	err := g.db.WithContext(ctx).Preload("Category").First(&tx, id).Error
 	if err != nil {
 		return nil, HandlerDBError(ctx, err, g.log)
 	}
@@ -36,6 +36,12 @@ func (g *gormTransactionRepository) GetByID(ctx context.Context, id uint) (*doma
 // update implements [domain.TransactionRepository].
 func (g *gormTransactionRepository) Update(ctx context.Context, tx *domain.Transaction) error {
 	err := g.db.WithContext(ctx).Save(tx).Error
+	if err != nil {
+		return HandlerDBError(ctx, err, g.log)
+	}
+
+	// สั่งโหลดข้อมูลใหม่ล่าสุดจาก DB พ่วง Category กลับมาส่งให้ชั้นนอก
+	err = g.db.WithContext(ctx).Preload("Category").First(tx, tx.ID).Error
 	if err != nil {
 		return HandlerDBError(ctx, err, g.log)
 	}
@@ -69,7 +75,7 @@ func (g *gormTransactionRepository) CalculateSummary(ctx context.Context, startD
 		Table("transactions").
 		Select(`
 		transactions.category_id,
-		COALESCE(categories.name, 'Uncategorized') as category_name, 
+		COALESCE(categories.name, 'Uncategorized') as category_name,
         COALESCE(categories.icon_url, ?) as icon_url,
 		transactions.transaction_type,
 		SUM(transactions.amount)as total_amount
@@ -127,8 +133,6 @@ func (g *gormTransactionRepository) FetchByTimeRange(ctx context.Context, startD
 	return txs, nil
 }
 
-
-
 // Insert implements [domain.TransactionRepository]. บันทึกรายการลงในฐานข้อมูล
 func (g *gormTransactionRepository) Insert(ctx context.Context, tx *domain.Transaction) error {
 	// ใช้ GORM บันทึกข้อมูลโตรงสร้าง Entity ลงตาราง transaction อัตโนมัติ
@@ -137,6 +141,11 @@ func (g *gormTransactionRepository) Insert(ctx context.Context, tx *domain.Trans
 		return HandlerDBError(ctx, err, g.log)
 	}
 
+	// เติมเต็มข้อมูลความสัมพันธ์ (Refresh Data) ด้วยการ Preload Category กลับมาใส่ใน Pointer ตัวเดิม
+	err = g.db.WithContext(ctx).Preload("Category").First(tx, tx.ID).Error
+	if err != nil {
+		return HandlerDBError(ctx, err, g.log)
+	}
 	return nil
 }
 
