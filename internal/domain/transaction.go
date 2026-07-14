@@ -6,16 +6,17 @@ import (
 )
 
 type Transaction struct {
-	ID              uint
-	Amount          float64
-	TransactionType string
-	ReceiverName    string
-	Note            string
-	CategoryID      int64
-	LocalImageName  string
-	TransactionDate time.Time
-	CreatedAt       time.Time
-	UpdatedAt       time.Time
+	ID              uint      `gorm:"primaryKey;autoIncrement"`
+	Amount          float64   `gorm:"type:numeric(12,2);not null"`
+	TransactionType string    `gorm:"type:varchar(50);not null"` // income, expense
+	ReceiverName    string    `gorm:"type:varchar(255)"`
+	Note            string    `gorm:"type:text"`
+	CategoryID      int64     `gorm:"not null"`
+	Category        Category  `gorm:"foreignKey:CategoryID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT;"`
+	LocalImageName  string    `gorm:"type:varchar(255)"`
+	TransactionDate time.Time `gorm:"not null"`
+	CreatedAt       time.Time `gorm:"autoCreateTime;not null"`
+	UpdatedAt       time.Time `gorm:"autoUpdateTime;not null"`
 }
 
 type TransactionRepository interface {
