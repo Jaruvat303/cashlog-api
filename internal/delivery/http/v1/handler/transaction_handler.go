@@ -3,11 +3,13 @@ package handler
 import (
 	"fmt"
 	"io"
+	"math"
 	"strconv"
 
 	"github.com/Jaruvat303/cashlog/internal/delivery/http/v1/dto"
 	"github.com/Jaruvat303/cashlog/internal/domain"
 	"github.com/Jaruvat303/cashlog/pkg/logger"
+	"github.com/Jaruvat303/cashlog/pkg/response"
 	"github.com/Jaruvat303/cashlog/pkg/timeutil"
 	"github.com/Jaruvat303/cashlog/pkg/validate"
 	"github.com/gofiber/fiber/v2"
@@ -107,19 +109,43 @@ func (h *TransactionHandler) GetDashboardSummary(c *fiber.Ctx) error {
 
 // GetMonthlyHistory สำหรับดึงข้อมูล Transaction ตามเวลาที่กำหนด
 func (h *TransactionHandler) GetMonthlyHistory(c *fiber.Ctx) error {
-	now := timeutil.NowInBangkok()
-	month := c.QueryInt("month", int(now.Month()))
-	year := c.QueryInt("year", now.Year())
+	// 1. แกะค่าจาก Query Parameters (พร้อมกำหนดค่า Default เผื่อหน้าบ้านไม่ได้ส่งมา)
+	year, _ := strconv.Atoi(c.Query("year", "0"))
+	month, _ := strconv.Atoi(c.Query("month", "0"))
+	page, _ := strconv.Atoi(c.Query("page", "1"))
+	limit, _ := strconv.Atoi(c.Query("limit", "20"))
 
 	ctx := c.UserContext()
-	transactions, err := h.txUsecase.GetMonthlyHistory(ctx, month, year)
+	transactions, err := h.txUsecase.FetchTransactions(ctx, domain.FetchTransactionInput{
+		Month: month,
+		Year:  year,
+		Limit: limit,
+		Page:  page,
+	})
 	if err != nil {
 		return err
 	}
 
+	// แปลงข้อมูลจาก Domain Model เป็น DTO สำหรับส่งกลับไปให้ Client
+	dtos := dto.MapToTransactionListResponse(transactions.Transactions)
+
+	// ตำนนจำนวนหน้าที่มีทั้งหมด
+	totalPages := int(math.Ceil(float64(transactions.TotalItems) / float64(limit)))
+	if totalPages == 0 && transactions.TotalItems == 0 {
+		totalPages = 1
+	}
+
+	// ใส่ข้อมูล Meta สำหรับ Pagination
+	meta := response.PaginationMeta{
+		TotalItems:  int(transactions.TotalItems),
+		TotalPages:  totalPages,
+		CurrentPage: page,
+		PageSize:    limit,
+	}
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
 		"success": true,
-		"data":    transactions,
+		"data":    dtos,
+		"meta":    meta,
 	})
 }
 

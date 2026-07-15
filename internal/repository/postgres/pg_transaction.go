@@ -14,6 +14,20 @@ type gormTransactionRepository struct {
 	log logger.Logger
 }
 
+// CountByTimeRange implements [domain.TransactionRepository].
+func (g *gormTransactionRepository) CountByTimeRange(ctx context.Context, startDate time.Time, endDate time.Time) (int64, error) {
+	var count int64
+	err := g.db.WithContext(ctx).
+		Model(&domain.Transaction{}).
+		Where("transaction_date BETWEEN ? AND ?", startDate, endDate).
+		Count(&count).Error
+
+	if err != nil {
+		return 0, HandlerDBError(ctx, err, g.log)
+	}
+	return count, nil
+}
+
 // Delete implements [domain.TransactionRepository].
 func (g *gormTransactionRepository) Delete(ctx context.Context, id uint) error {
 	err := g.db.WithContext(ctx).Delete(&domain.Transaction{}, id).Error
@@ -117,15 +131,14 @@ func (g *gormTransactionRepository) CalculateSummary(ctx context.Context, startD
 }
 
 // FetchByTimeRange implements [domain.TransactionRepository].
-func (g *gormTransactionRepository) FetchByTimeRange(ctx context.Context, startDate time.Time, endDate time.Time) ([]domain.Transaction, error) {
+func (g *gormTransactionRepository) FetchByTimeRange(ctx context.Context, param domain.QueryTransactionParam) ([]domain.Transaction, error) {
 	var txs []domain.Transaction
 
-	// SQL: SELECT * FROM transactions WHERE transaction_at BETWEEN ? AND ? ORDER BY transaction_at DESC
 	err := g.db.WithContext(ctx).
 		Table("transactions").
-		Where("transaction_date BETWEEN ? AND ?", startDate, endDate).
-		Order("transaction_id DESC").
-		Find(&txs).Error
+		Preload("Category").
+		Where("transaction_date BETWEEN ? AND ?", param.StartDate, param.EndDate).
+		Order("transaction_date DESC,id DESC").Find(&txs).Error
 
 	if err != nil {
 		return nil, HandlerDBError(ctx, err, g.log)
