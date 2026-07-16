@@ -72,10 +72,12 @@ func (g *gormTransactionRepository) CalculateSummary(ctx context.Context, startD
 		Expense: []domain.CategoryBreakdown{},
 	}
 
+	// QueryResult เป็นโครงสร้างชั่วคราวสำหรับเก็บผลลัพธ์จาก Query
 	type QueryResult struct {
 		CategoryID      *int64
 		CategoryName    string
-		IconURL         *string
+		IconKey         *string
+		ColorHex        *string
 		TransactionType *string
 		TotalAmount     float64
 	}
@@ -84,19 +86,21 @@ func (g *gormTransactionRepository) CalculateSummary(ctx context.Context, startD
 
 	// ถ้าไม่มี Icon Url ให้ใช้ค่าเริ่มต้น
 	defaultIcon := "folder"
+	defaultColor := "#CCCCCC"
 	// Query เดียวที่ดึงข้อมูลสรุปตามหมวดหมู่ในช่วงเวลาที่กำหนด
 	err := g.db.WithContext(ctx).
 		Table("transactions").
 		Select(`
 		transactions.category_id,
 		COALESCE(categories.name, 'Uncategorized') as category_name,
-        COALESCE(categories.icon_url, ?) as icon_url,
+        COALESCE(categories.icon_key, ?) as icon_key,
+		COALESCE(categories.color_hex, ?) as color_hex,
 		transactions.transaction_type,
 		SUM(transactions.amount)as total_amount
-		`, defaultIcon).
+		`, defaultIcon, defaultColor).
 		Joins("LEFT JOIN categories ON transactions.category_id = categories.id").
 		Where("transactions.transaction_date BETWEEN ? AND ?", startDate, endDate).
-		Group("transactions.category_id,categories.name,categories.icon_url,transactions.transaction_type").
+		Group("transactions.category_id,categories.name,categories.icon_key,categories.color_hex,transactions.transaction_type").
 		Scan(&result).Error
 
 	if err != nil {
@@ -113,7 +117,26 @@ func (g *gormTransactionRepository) CalculateSummary(ctx context.Context, startD
 		breakdown := domain.CategoryBreakdown{
 			CategoryID:   catID,
 			CategoryName: res.CategoryName,
-			IconURl:      res.IconURL,
+			IconKey:      defaultIcon,
+			ColorHex:     defaultColor,
+			TotalAmount:  res.TotalAmount,
+		}
+
+		if res.IconKey != nil {
+			breakdown.IconKey = *res.IconKey
+		}
+		if res.ColorHex != nil {
+			breakdown.ColorHex = *res.ColorHex
+		}
+
+		summary.TotalIncome += 0
+		summary.TotalExpense += 0
+
+		breakdown = domain.CategoryBreakdown{
+			CategoryID:   catID,
+			CategoryName: res.CategoryName,
+			IconKey:      breakdown.IconKey,
+			ColorHex:     breakdown.ColorHex,
 			TotalAmount:  res.TotalAmount,
 		}
 

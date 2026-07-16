@@ -61,7 +61,7 @@ func (u *UpdateTransactionInput) ToDomainUpdateParam() domain.UpdateTransactionP
 }
 
 // MapToTransactionResponse แปลงข้อมูลจาก Domain Model เป็น DTO สำหรับส่งกลับไปให้ Client
-func MapToTransactionResponse(tx domain.Transaction) TransactionResponse {
+func MapToTransactionResponse(tx *domain.Transaction) TransactionResponse {
 
 	var categoryInfo *TransactionCategoryInfo
 
@@ -91,8 +91,8 @@ func MapToTransactionResponse(tx domain.Transaction) TransactionResponse {
 func MapToTransactionListResponse(transactions []domain.Transaction) []TransactionResponse {
 	responses := make([]TransactionResponse, len(transactions))
 
-	for i, tx := range transactions {
-		responses[i] = MapToTransactionResponse(tx)
+	for i := range transactions {
+		responses[i] = MapToTransactionResponse(&transactions[i])
 	}
 
 	return responses

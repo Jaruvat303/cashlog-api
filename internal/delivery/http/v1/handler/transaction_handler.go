@@ -48,6 +48,7 @@ func (h *TransactionHandler) UplaodSlipAndLog(c *fiber.Ctx) error {
 	if err != nil {
 		return fmt.Errorf("failed to open file image: %w", err)
 	}
+	// ปิดไฟล์เมื่อฟังก์ชันนี้ทำงานเสร็จ
 	defer func() {
 		_ = file.Close()
 	}()
@@ -65,19 +66,14 @@ func (h *TransactionHandler) UplaodSlipAndLog(c *fiber.Ctx) error {
 
 	// เคสที่งานสำเร็จแบบพิเศษข้ามเพราะข้อมูลซ้ำ
 	if resultTx == nil {
-		return c.Status(fiber.StatusCreated).JSON(fiber.Map{
-			"success": true,
-			"message": "Transaction processed successfully (skipped or duplicate caught early)",
-			"data":    resultTx,
-		})
+		return response.OkMessage(c, fiber.StatusOK,
+			"Transaction processed successfully (skipped or duplicate caught early)")
 	}
 
-	// เคสงานสำเร็จแบบปกติ (Happy Path แบบมีข้อมูลใหม่)
-	return c.Status(fiber.StatusCreated).JSON(fiber.Map{
-		"success": true,
-		"message": "Transaction logged successfully",
-		"data":    resultTx,
-	})
+	// map ข้อมูลจาก Domain Model เป็น DTO สำหรับส่งกลับไปให้ Client
+	dtoResult := dto.MapToTransactionResponse(resultTx)
+
+	return response.Success(c, fiber.StatusCreated, "Transaction processed successfully", dtoResult)
 }
 
 // GetDashboardSummary ตอบกลับข้อมูลสรุปรายรับ-รายจ่ายประจำเดือนหรือรายปี
@@ -101,10 +97,10 @@ func (h *TransactionHandler) GetDashboardSummary(c *fiber.Ctx) error {
 		return err
 	}
 
-	return c.Status(fiber.StatusOK).JSON(fiber.Map{
-		"success": true,
-		"data":    summary,
-	})
+	// map ข้อมูลจาก Domain Model เป็น DTO สำหรับส่งกลับไปให้ Client
+	dtoSummary := dto.MapToDashboardSummaryResponse(summary)
+
+	return response.Success(c, fiber.StatusOK, "Dashboard summary fetched successfully", dtoSummary)
 }
 
 // GetMonthlyHistory สำหรับดึงข้อมูล Transaction ตามเวลาที่กำหนด
@@ -142,11 +138,8 @@ func (h *TransactionHandler) GetMonthlyHistory(c *fiber.Ctx) error {
 		CurrentPage: page,
 		PageSize:    limit,
 	}
-	return c.Status(fiber.StatusOK).JSON(fiber.Map{
-		"success": true,
-		"data":    dtos,
-		"meta":    meta,
-	})
+
+	return response.Paginated(c, fiber.StatusOK, "Monthly history fetched successfully", dtos, meta)
 }
 
 // UpdateTransaction สำหรับแก้ไขข้อมูล Transaction
@@ -176,11 +169,10 @@ func (h *TransactionHandler) UpdateTransaction(c *fiber.Ctx) error {
 		return err
 	}
 
-	return c.Status(fiber.StatusOK).JSON(fiber.Map{
-		"success": true,
-		"message": "update transaction successfully",
-		"data":    result,
-	})
+	// Map ข้อมูลจาก Domain Model เป็น DTO สำหรับส่งกลับไปให้ Client
+	resultDTO := dto.MapToTransactionResponse(result)
+
+	return response.Success(c, fiber.StatusOK, "Transaction updated successfully", resultDTO)
 }
 
 // Delete Transaction สำหรับการลบข้อมูล ด้วย id (soft delete)
@@ -200,10 +192,6 @@ func (h *TransactionHandler) DeleteTransaction(c *fiber.Ctx) error {
 		return err
 	}
 
-	return c.Status(fiber.StatusOK).JSON(fiber.Map{
-		"success":        true,
-		"message":        "delete transaction successfull",
-		"transaction_id": id,
-	})
+	return response.OkMessage(c, fiber.StatusOK, "Transaction deleted successfully")
 
 }

@@ -109,9 +109,21 @@ func TestDashboardSummary(t *testing.T) {
 }
 
 func TestGetMonthlyHistory(t *testing.T) {
+
+	mockInput := domain.FetchTransactionInput{
+		Month: 6,
+		Year:  2026,
+		Page:  1,
+		Limit: 10,
+	}
 	mockHistory := []domain.Transaction{
 		{ID: 1, Amount: 200},
 		{ID: 2, Amount: 500},
+	}
+
+	mockUsecaseResponse := &domain.FetchTransactionResult{
+		Transactions: mockHistory,
+		TotalItems:   int64(len(mockHistory)),
 	}
 
 	tests := []struct {
@@ -123,18 +135,18 @@ func TestGetMonthlyHistory(t *testing.T) {
 	}{
 		{
 			name: "1. Success - รับค่าพารามิเตอร์ปกติ เรียกดูข้อมูลสำเร็จ",
-			url:  "/api/v1/transaction?month=6&year=2026",
+			url:  "/api/v1/transaction?month=6&year=2026&page=1&limit=10",
 			setupMock: func(uc *domain.TransactionUsecaseMock) {
-				uc.On("GetMonthlyHistory", mock.Anything, 6, 2026).Return(mockHistory, nil)
+				uc.On("FetchTransactions", mock.Anything, mockInput).Return(mockUsecaseResponse, nil)
 			},
 			expectedStatus: fiber.StatusOK,
 			expectedBody:   `"success":true`,
 		},
 		{
 			name: "2. Usecase Error - หลังบ้านพัง Handler ส่งต่อ Error ได้",
-			url:  "/api/v1/transaction?month=6&year=2026",
+			url:  "/api/v1/transaction?month=6&year=2026&page=1&limit=10",
 			setupMock: func(uc *domain.TransactionUsecaseMock) {
-				uc.On("GetMonthlyHistory", mock.Anything, 6, 2026).Return(nil, errors.New("something went wrong in usecase"))
+				uc.On("FetchTransactions", mock.Anything, mockInput).Return(nil, errors.New("something went wrong in usecase"))
 			},
 			expectedStatus: fiber.StatusInternalServerError,
 			expectedBody:   "something went wrong in usecase",
@@ -449,7 +461,7 @@ func TestUplaodSlipAndLog(t *testing.T) {
 				uc.On("SyncTransaction", mock.Anything, mockImageByte, "slip_06.jpg").Return(tx, nil)
 			},
 			expectedStatus: fiber.StatusCreated,
-			expectedBody:   `"message":"Transaction logged successfully"`,
+			expectedBody:   `"message":"Transaction processed successfully"`,
 		},
 		{
 			name:      "4. Succes - Create Sucess Duplicate Data",
@@ -459,7 +471,7 @@ func TestUplaodSlipAndLog(t *testing.T) {
 				mockImageByte := []byte("fake-image-bytes")
 				uc.On("SyncTransaction", mock.Anything, mockImageByte, "slip_06.jpg").Return(nil, nil)
 			},
-			expectedStatus: fiber.StatusCreated,
+			expectedStatus: fiber.StatusOK,
 			expectedBody:   `"message":"Transaction processed successfully (skipped or duplicate caught early)"`,
 		},
 	}
