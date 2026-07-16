@@ -72,7 +72,7 @@ func main() {
 
 	app := fiber.New(fiber.Config{
 		AppName:      "CashLog API v1.0",
-		ErrorHandler: router.NewGlobalErrorHandler(appLogger),
+		ErrorHandler: middleware.NewGlobalErrorHandler(appLogger),
 	})
 
 	// Middleware Setting
