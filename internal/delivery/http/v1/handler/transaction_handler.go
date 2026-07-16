@@ -20,7 +20,7 @@ type TransactionHandler struct {
 	log       logger.Logger
 }
 
-// NewTransactionHandler ทำหน้าที่สร้าง Handler เพื่อนำไปผูกกับ Router ของ Fiber
+// NewTransactionHandler สร้าง TransactionHandler ใหม่
 func NewTransactionHandler(txUsecase domain.TransactionUsecase, applogger logger.Logger) *TransactionHandler {
 	return &TransactionHandler{
 		txUsecase: txUsecase,
@@ -28,7 +28,18 @@ func NewTransactionHandler(txUsecase domain.TransactionUsecase, applogger logger
 	}
 }
 
-// UploadSlipAndLog ทำหน้าที่ไฟล์ภาพสลืปและข้อมูลเพื่อนำไปประมวลผลบันทึกรายรับรายจ่าย
+// UplaodSlipAndLog สำหรับอัปโหลดสลิปและบันทึก Transaction
+// @Summary อัปโหลดสลิปและบันทึก Transaction
+// @Description อัปโหลดสลิปและบันทึก Transaction โดยต้องแนบไฟล์สลิปและระบุชื่อไฟล์ต้นฉบับ
+// @Tags Transaction
+// @Accept multipart/form-data
+// @Produce json
+// @Param local_image_name formData string true "ชื่อไฟล์ต้นฉบับของสลิป"
+// @Param image formData file true "ไฟล์สลิป (รูปภาพ)"
+// @Success 201 {object} response.JSONResponse[dto.TransactionResponse] "อัปโหลดสลิปและบันทึก Transaction สำเร็จ"
+// @Failure 400 {object} dto.ErrorResponse "invalid request body หรือ validate struct error body"
+// @Failure 500 {object} dto.ErrorResponse "Something went wrong, please try again later."
+// @Router /transactions/upload-slip [post]
 func (h *TransactionHandler) UplaodSlipAndLog(c *fiber.Ctx) error {
 	ctx := c.UserContext()
 	// อ่านค่าชื่อไฟล์ภาพต้นฉบับจาก Form Value
@@ -77,6 +88,18 @@ func (h *TransactionHandler) UplaodSlipAndLog(c *fiber.Ctx) error {
 }
 
 // GetDashboardSummary ตอบกลับข้อมูลสรุปรายรับ-รายจ่ายประจำเดือนหรือรายปี
+// @Summary ดึงข้อมูลสรุปรายรับ-รายจ่ายประจำเดือนหรือรายปี
+// @Description ดึงข้อมูลสรุปรายรับ-รายจ่ายประจำเดือนหรือรายปี โดยสามารถระบุช่วงเวลาได้ผ่าน Query Parameters
+// @Tags Transaction
+// @Accept json
+// @Produce json
+// @Param scope query string false "ช่วงเวลาที่ต้องการดึงข้อมูล" Enums(monthly, yearly) default(monthly)
+// @Param month query int false "เดือนที่ต้องการดึงข้อมูล (1-12)" default(current month)
+// @Param year query int false "ปีที่ต้องการดึงข้อมูล" default(current year)
+// @Success 200 {object} response.JSONResponse[dto.DashboardSummaryResponse] "ดึงข้อมูลสรุปรายรับ-รายจ่ายสำเร็จ"
+// @Failure 400 {object} dto.ErrorResponse "invalid request body หรือ validate struct error body"
+// @Failure 500 {object} dto.ErrorResponse "Something went wrong, please try again later."
+// @Router /transactions/dashboard-summary [get]
 func (h *TransactionHandler) GetDashboardSummary(c *fiber.Ctx) error {
 	ctx := c.UserContext()
 
@@ -104,6 +127,19 @@ func (h *TransactionHandler) GetDashboardSummary(c *fiber.Ctx) error {
 }
 
 // GetMonthlyHistory สำหรับดึงข้อมูล Transaction ตามเวลาที่กำหนด
+// @Summary ดึงข้อมูล Transaction ตามเวลาที่กำหนด
+// @Description ดึงข้อมูล Transaction ตามเวลาที่กำหนด โดยสามารถระบุปี เดือน และการแบ่งหน้า (Pagination) ได้ผ่าน Query Parameters
+// @Tags Transaction
+// @Accept json
+// @Produce json
+// @Param year query int false "ปีที่ต้องการดึงข้อมูล" default(current year)
+// @Param month query int false "เดือนที่ต้องการดึงข้อมูล (1-12)" default(current month)
+// @Param page query int false "หน้าที่ต้องการดึงข้อมูล" default(1)
+// @Param limit query int false "จำนวนรายการต่อหน้า" default(20)
+// @Success 200 {object} response.PaginatedResponse[dto.TransactionResponse] "ดึงข้อมูล Transaction สำเร็จ"
+// @Failure 400 {object} dto.ErrorResponse "invalid request body หรือ validate struct error body"
+// @Failure 500 {object} dto.ErrorResponse "Something went wrong, please try again later."
+// @Router /transactions/monthly-history [get]
 func (h *TransactionHandler) GetMonthlyHistory(c *fiber.Ctx) error {
 	// 1. แกะค่าจาก Query Parameters (พร้อมกำหนดค่า Default เผื่อหน้าบ้านไม่ได้ส่งมา)
 	year, _ := strconv.Atoi(c.Query("year", "0"))
@@ -143,6 +179,18 @@ func (h *TransactionHandler) GetMonthlyHistory(c *fiber.Ctx) error {
 }
 
 // UpdateTransaction สำหรับแก้ไขข้อมูล Transaction
+// @Summary แก้ไขข้อมูล Transaction
+// @Description แก้ไขข้อมูล Transaction โดยต้องระบุ ID ของ Transaction ที่ต้องการแก้ไข และสามารถแก้ไขข้อมูลบางส่วนได้ (Partial Update)
+// @Tags Transaction
+// @Accept json
+// @Produce json
+// @Param id path int true "ID ของ Transaction ที่ต้องการแก้ไข"
+// @Param request body dto.UpdateTransactionInput true "ข้อมูลที่ต้องการแก้ไข (Partial Update)"
+// @Success 200 {object} response.JSONResponse[dto.TransactionResponse] "แก้ไขข้อมูล Transaction สำเร็จ"
+// @Failure 400 {object} dto.ErrorResponse "invalid request body หรือ validate struct error body"
+// @Failure 404 {object} dto.ErrorResponse "The requested data was not found"
+// @Failure 500 {object} dto.ErrorResponse "Something went wrong, please try again later."
+// @Router /transactions/{id} [put]
 func (h *TransactionHandler) UpdateTransaction(c *fiber.Ctx) error {
 	ctx := c.UserContext()
 
@@ -176,6 +224,16 @@ func (h *TransactionHandler) UpdateTransaction(c *fiber.Ctx) error {
 }
 
 // Delete Transaction สำหรับการลบข้อมูล ด้วย id (soft delete)
+// @Summary ลบข้อมูล Transaction
+// @Description ลบข้อมูล Transaction โดยต้องระบุ ID ของ Transaction ที่ต้องการลบ
+// @Tags Transaction
+// @Accept json
+// @Produce json
+// @Param id path int true "ID ของ Transaction ที่ต้องการลบ"
+// @Success 200 {object} response.JSONResponse[interface{}] "ลบข้อมูล Transaction สำเร็จ"
+// @Failure 404 {object} dto.ErrorResponse "The requested data was not found"
+// @Failure 500 {object} dto.ErrorResponse "Something went wrong, please try again later."
+// @Router /transactions/{id} [delete]
 func (h *TransactionHandler) DeleteTransaction(c *fiber.Ctx) error {
 	ctx := c.UserContext()
 
