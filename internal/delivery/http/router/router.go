@@ -4,6 +4,9 @@ import (
 	"github.com/Jaruvat303/cashlog/internal/delivery/http/v1/handler"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/monitor"
+	"github.com/gofiber/swagger"
+
+	_ "github.com/Jaruvat303/cashlog/docs"
 )
 
 func SetupRoutes(app *fiber.App,
@@ -23,6 +26,9 @@ func SetupRoutes(app *fiber.App,
 	app.Get("/metrics", monitor.New(monitor.Config{
 		Title: "My API Performance Metrics",
 	}))
+
+	// เปิดต้อนรับหน้า UI ที่พอร์ตของเรา
+	app.Get("/swagger/*", swagger.HandlerDefault)
 
 	// กำหนดและผูกเส้นทาง API Endpoint ตามสัญญา RESTful Spec
 	v1 := app.Group("/api/v1")
