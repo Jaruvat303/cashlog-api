@@ -11,7 +11,7 @@ type Category struct {
 	Type      string    `gorm:"type:varchar(100);not null;index"`
 	IconKey   string    `gorm:"type:varchar(50);column:icon_key"`  // เก็บชื่อกลาง เช่น "utensils", "zap", "wallet"
 	ColorHex  string    `gorm:"type:varchar(10);column:color_hex"` // เก็บโค้ดสี เช่น "#EF4444"
-	CreatedAt time.Time `gorm:"autoCreateTime;not null"`
+	CreatedAt time.Time `gorm:"autoCreateTime:not null"`
 	UpdatedAt time.Time `gorm:"autoUpdateTime:not null"`
 }
 
