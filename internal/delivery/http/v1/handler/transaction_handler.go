@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"fmt"
 	"io"
 	"math"
 	"strconv"
@@ -36,28 +35,30 @@ func NewTransactionHandler(txUsecase domain.TransactionUsecase, applogger logger
 // @Produce json
 // @Param local_image_name formData string true "ชื่อไฟล์ต้นฉบับของสลิป"
 // @Param image formData file true "ไฟล์สลิป (รูปภาพ)"
-// @Success 201 {object} response.JSONResponse[dto.TransactionResponse] "อัปโหลดสลิปและบันทึก Transaction สำเร็จ"
-// @Failure 400 {object} dto.ErrorResponse "invalid request body หรือ validate struct error body"
-// @Failure 500 {object} dto.ErrorResponse "Something went wrong, please try again later."
-// @Router /transactions/upload-slip [post]
+// @Success 201 {object} response.JsonResponse[dto.CategoryResponse] "Transaction processed successfully"
+// @Failure 400 {object} dto.ErrorResponseDTO "Bad Request  <br>error_code: INVALID_INPUT_PARAMETERS <br>message: 1. Missing required form field 'local_image_name' 2. Missing required file 'image' in multipart/form-data request."
+// @Failure 499 {object} dto.ErrorResponseDTO "Client Closed Request  <br>error_code: REQUEST_CANCELED <br>message: The request was canceled by the user"
+// @Failure 500 {object} dto.ErrorResponseDTO "Internal Server Error <br>error_code: INTERNAL_SERVER_ERROR or INTERNAL_DATABASE_ERROR <br>message: Something went wrong, please try again later"
+// @Failure 504 {object} dto.ErrorResponseDTO "Gateway Timeout <br>error_code: DATABASE_TIMEOUT <br>message: The database operation timed out, please try again"
+// // @Router /transactions/upload-slip [post]
 func (h *TransactionHandler) UplaodSlipAndLog(c *fiber.Ctx) error {
 	ctx := c.UserContext()
 	// อ่านค่าชื่อไฟล์ภาพต้นฉบับจาก Form Value
 	localImageName := c.FormValue("local_image_name")
 	if localImageName == "" {
-		return fiber.NewError(fiber.StatusBadRequest, "The field `local_image_name` is required.")
+		return fiber.NewError(fiber.StatusBadRequest, "Missing required form field 'local_image_name'.")
 	}
 
 	// ดึงไฟล์ภาพสลืปที่แนบมาในชื่อฟิลด์ "image"
 	fileHeader, err := c.FormFile("image")
 	if err != nil {
-		return fiber.NewError(fiber.StatusBadRequest, "The `image` flie is required in multipart/form-data.")
+		return fiber.NewError(fiber.StatusBadRequest, "Missing required file 'image' in multipart/form-data request.")
 	}
 
 	// เปิดไฟล์และแปลงข้อมูลภาพให้อยู่่ในรูปแบบ byte array ([]byte)
 	file, err := fileHeader.Open()
 	if err != nil {
-		return fmt.Errorf("failed to open file image: %w", err)
+		return fiber.NewError(fiber.StatusInternalServerError, "Unable to read the uploaded image. The file may be corrupted or incomplete.")
 	}
 	// ปิดไฟล์เมื่อฟังก์ชันนี้ทำงานเสร็จ
 	defer func() {
@@ -66,7 +67,7 @@ func (h *TransactionHandler) UplaodSlipAndLog(c *fiber.Ctx) error {
 
 	imageBytes, err := io.ReadAll(file)
 	if err != nil {
-		return fmt.Errorf("failed to read image byte: %w", err)
+		return fiber.NewError(fiber.StatusInternalServerError, "Unable to read the uploaded image. The file may be corrupted or incomplete.")
 	}
 
 	// ส่งข้อมูลรูปภาพและชื่อไฟล์เข้าไปให้ Usecase ประมวลผลตรรกะทั้งหมด
@@ -96,9 +97,11 @@ func (h *TransactionHandler) UplaodSlipAndLog(c *fiber.Ctx) error {
 // @Param scope query string false "ช่วงเวลาที่ต้องการดึงข้อมูล" Enums(monthly, yearly) default(monthly)
 // @Param month query int false "เดือนที่ต้องการดึงข้อมูล (1-12)" default(current month)
 // @Param year query int false "ปีที่ต้องการดึงข้อมูล" default(current year)
-// @Success 200 {object} response.JSONResponse[dto.DashboardSummaryResponse] "ดึงข้อมูลสรุปรายรับ-รายจ่ายสำเร็จ"
-// @Failure 400 {object} dto.ErrorResponse "invalid request body หรือ validate struct error body"
-// @Failure 500 {object} dto.ErrorResponse "Something went wrong, please try again later."
+// @Success 200 {object} response.JsonResponse[dto.DashboardSummaryResponse] "Dashboard summary fetched successfully"
+// @Failure 400 {object} dto.ErrorResponseDTO "Bad Request  <br>error_code: INVALID_INPUT_PARAMETERS <br>message: Invalid query parameter 'scope'. Allowed values are 'monthly' or 'yearly'."
+// @Failure 499 {object} dto.ErrorResponseDTO "Client Closed Request  <br>error_code: REQUEST_CANCELED <br>message: The request was canceled by the user"
+// @Failure 500 {object} dto.ErrorResponseDTO "Internal Server Error <br>error_code: INTERNAL_SERVER_ERROR or INTERNAL_DATABASE_ERROR <br>message: Something went wrong, please try again later"
+// @Failure 504 {object} dto.ErrorResponseDTO "Gateway Timeout <br>error_code: DATABASE_TIMEOUT <br>message: The database operation timed out, please try again"
 // @Router /transactions/dashboard-summary [get]
 func (h *TransactionHandler) GetDashboardSummary(c *fiber.Ctx) error {
 	ctx := c.UserContext()
@@ -111,7 +114,7 @@ func (h *TransactionHandler) GetDashboardSummary(c *fiber.Ctx) error {
 
 	// ตรวจสอบข้อความที่ client ส่งมา
 	if scope != "monthly" && scope != "yearly" {
-		return fiber.NewError(fiber.StatusBadRequest, "invalid scope parameter")
+		return fiber.NewError(fiber.StatusBadRequest, "Invalid query parameter 'scope'. Allowed values are 'monthly' or 'yearly'.")
 	}
 
 	// เรียกใช้งาน Usecase เพื่อดึงข้อมูล
@@ -137,8 +140,9 @@ func (h *TransactionHandler) GetDashboardSummary(c *fiber.Ctx) error {
 // @Param page query int false "หน้าที่ต้องการดึงข้อมูล" default(1)
 // @Param limit query int false "จำนวนรายการต่อหน้า" default(20)
 // @Success 200 {object} response.PaginatedResponse[dto.TransactionResponse] "ดึงข้อมูล Transaction สำเร็จ"
-// @Failure 400 {object} dto.ErrorResponse "invalid request body หรือ validate struct error body"
-// @Failure 500 {object} dto.ErrorResponse "Something went wrong, please try again later."
+// @Failure 499 {object} dto.ErrorResponseDTO "Client Closed Request  <br>error_code: REQUEST_CANCELED <br>message: The request was canceled by the user"
+// @Failure 500 {object} dto.ErrorResponseDTO "Internal Server Error <br>error_code: INTERNAL_SERVER_ERROR or INTERNAL_DATABASE_ERROR <br>message: Something went wrong, please try again later"
+// @Failure 504 {object} dto.ErrorResponseDTO "Gateway Timeout <br>error_code: DATABASE_TIMEOUT <br>message: The database operation timed out, please try again"
 // @Router /transactions/monthly-history [get]
 func (h *TransactionHandler) GetMonthlyHistory(c *fiber.Ctx) error {
 	// 1. แกะค่าจาก Query Parameters (พร้อมกำหนดค่า Default เผื่อหน้าบ้านไม่ได้ส่งมา)
@@ -186,11 +190,12 @@ func (h *TransactionHandler) GetMonthlyHistory(c *fiber.Ctx) error {
 // @Produce json
 // @Param id path int true "ID ของ Transaction ที่ต้องการแก้ไข"
 // @Param request body dto.UpdateTransactionInput true "ข้อมูลที่ต้องการแก้ไข (Partial Update)"
-// @Success 200 {object} response.JSONResponse[dto.TransactionResponse] "แก้ไขข้อมูล Transaction สำเร็จ"
-// @Failure 400 {object} dto.ErrorResponse "invalid request body หรือ validate struct error body"
-// @Failure 404 {object} dto.ErrorResponse "The requested data was not found"
-// @Failure 500 {object} dto.ErrorResponse "Something went wrong, please try again later."
-// @Router /transactions/{id} [put]
+// @Success 200 {object} response.JsonResponse[dto.TransactionResponse] "Transaction updated successfully"
+// @Failure 400 {object} dto.ErrorResponseDTO "Bad Request  <br>error_code: INVALID_INPUT_PARAMETERS <br>message: 1. Invalid ID format. The path parameter 'id' must be a positive integer. 2. Invalid JSON format. 3. Validation failed for the request data"
+// @Failure 499 {object} dto.ErrorResponseDTO "Client Closed Request  <br>error_code: REQUEST_CANCELED <br>message: The request was canceled by the user"
+// @Failure 500 {object} dto.ErrorResponseDTO "Internal Server Error <br>error_code: INTERNAL_SERVER_ERROR or INTERNAL_DATABASE_ERROR <br>message: Something went wrong, please try again later"
+// @Failure 504 {object} dto.ErrorResponseDTO "Gateway Timeout <br>error_code: DATABASE_TIMEOUT <br>message: The database operation timed out, please try again"
+// // @Router /transactions/{id} [put]
 func (h *TransactionHandler) UpdateTransaction(c *fiber.Ctx) error {
 	ctx := c.UserContext()
 
@@ -198,18 +203,18 @@ func (h *TransactionHandler) UpdateTransaction(c *fiber.Ctx) error {
 	idParam := c.Params("id")
 	id, err := strconv.ParseUint(idParam, 10, 64)
 	if err != nil {
-		return fiber.NewError(fiber.StatusBadRequest, "parse id param to uint error")
+		return fiber.NewError(fiber.StatusBadRequest, "Invalid ID format. The path parameter 'id' must be a positive integer.")
 	}
 
 	// ผูกข้อมูล (Bind) JSON Request Body เข้ากับ DTO
 	var input dto.UpdateTransactionInput
 	if err := c.BodyParser(&input); err != nil {
-		return fiber.NewError(fiber.StatusBadRequest, "invalid request body")
+		return fiber.NewError(fiber.StatusBadRequest, "Invalid JSON format.")
 	}
 
 	// ตรวจสอบ Tag Validate
 	if err := validate.ValidateStruct(input); err != nil {
-		return fiber.NewError(fiber.StatusBadRequest, "validation struct error")
+		return fiber.NewError(fiber.StatusBadRequest, "Validation failed for the request data.")
 	}
 
 	result, err := h.txUsecase.UpdateTransaction(ctx, uint(id), input.ToDomainUpdateParam())
@@ -230,10 +235,11 @@ func (h *TransactionHandler) UpdateTransaction(c *fiber.Ctx) error {
 // @Accept json
 // @Produce json
 // @Param id path int true "ID ของ Transaction ที่ต้องการลบ"
-// @Success 200 {object} response.JSONResponse[interface{}] "ลบข้อมูล Transaction สำเร็จ"
-// @Failure 404 {object} dto.ErrorResponse "The requested data was not found"
-// @Failure 500 {object} dto.ErrorResponse "Something went wrong, please try again later."
-// @Router /transactions/{id} [delete]
+// @Success 200 {object} response.JsonResponse[dto.EmptyData] "Transaction deleted successfully"
+// @Failure 400 {object} dto.ErrorResponseDTO "Bad Request  <br>error_code: INVALID_INPUT_PARAMETERS <br>message: 1. Invalid ID format. The path parameter 'id' must be a positive integer."
+// @Failure 500 {object} dto.ErrorResponseDTO "Internal Server Error <br>error_code: INTERNAL_SERVER_ERROR or INTERNAL_DATABASE_ERROR <br>message: Something went wrong, please try again later"
+// @Failure 504 {object} dto.ErrorResponseDTO "Gateway Timeout <br>error_code: DATABASE_TIMEOUT <br>message: The database operation timed out, please try again"
+// // @Router /transactions/{id} [delete]
 func (h *TransactionHandler) DeleteTransaction(c *fiber.Ctx) error {
 	ctx := c.UserContext()
 

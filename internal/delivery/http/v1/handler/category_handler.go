@@ -30,9 +30,11 @@ func NewCategoryHandler(usecase domain.CategoryUsecase, appLogger logger.Logger)
 // @Accept json
 // @Produce json
 // @Param input body dto.CreateCategoryInput true "ข้อมูลสำหรับสร้าง Category"
-// @Success 201 {object} response.JSONResponse[dto.CategoryResponse] "สร้าง Category สำเร็จ"
-// @Failure 400 {object} dto.ErrorResponse "invalid request body หรือ validate struct error body"
-// @Failure 500 {object} dto.ErrorResponse "Something went wrong, please try again later."
+// @Success 201 {object} response.JsonResponse[dto.CategoryResponse] "create category successfull"
+// @Failure 400 {object} dto.ErrorResponseDTO "Bad Request  <br>error_code: INVALID_INPUT_PARAMETERS <br>message: 1. Invalid JSON format.  2. Validation failed for the request data."
+// @Failure 499 {object} dto.ErrorResponseDTO "Client Closed Request  <br>error_code: REQUEST_CANCELED <br>message: The request was canceled by the user"
+// @Failure 500 {object} dto.ErrorResponseDTO "Internal Server Error <br>error_code: INTERNAL_SERVER_ERROR or INTERNAL_DATABASE_ERROR <br>message: Something went wrong, please try again later"
+// @Failure 504 {object} dto.ErrorResponseDTO "Gateway Timeout <br>error_code: DATABASE_TIMEOUT <br>message: The database operation timed out, please try again"
 // @Router /categories [post]
 func (h *CategoryHandler) CreateCategory(c *fiber.Ctx) error {
 	ctx := c.UserContext()
@@ -40,12 +42,12 @@ func (h *CategoryHandler) CreateCategory(c *fiber.Ctx) error {
 	// ผูก Json Body กับ DTO data
 	var input dto.CreateCategoryInput
 	if err := c.BodyParser(&input); err != nil {
-		return fiber.NewError(fiber.StatusBadRequest, "invalid request body")
+		return fiber.NewError(fiber.StatusBadRequest, "Invalid JSON format.")
 	}
 
 	// ตรวจสอบ validate tag
 	if err := validate.ValidateStruct(&input); err != nil {
-		return fiber.NewError(fiber.StatusBadRequest, "validate struct error body")
+		return fiber.NewError(fiber.StatusBadRequest, "Validation failed for the request data.")
 	}
 
 	// เรียกงาน usecase
@@ -68,10 +70,11 @@ func (h *CategoryHandler) CreateCategory(c *fiber.Ctx) error {
 // @Produce json
 // @Param id path int true "ID ของ Category ที่ต้องการอัปเดต"
 // @Param input body dto.UpdateCategoryInput true "ข้อมูลสำหรับอัปเดต Category"
-// @Success 200 {object} response.JSONResponse[dto.CategoryResponse] "อัปเดต Category สำเร็จ"
-// @Failure 400 {object} dto.ErrorResponse "invalid request body หรือ validate struct error body"
-// @Failure 404 {object} dto.ErrorResponse "The requested data was not found"
-// @Failure 500 {object} dto.ErrorResponse "Something went wrong, please try again later."
+// @Success 200 {object} response.JsonResponse[dto.CategoryResponse] "update category successfull"
+// @Failure 400 {object} dto.ErrorResponseDTO "Bad Request  <br>error_code: INVALID_INPUT_PARAMETERS <br>message: 1. Invalid ID format (must be a positive integer) 2. Invalid JSON format 3. Validation failed for the request data"
+// @Failure 499 {object} dto.ErrorResponseDTO "Client Closed Request  <br>error_code: REQUEST_CANCELED <br>message: The request was canceled by the user"
+// @Failure 500 {object} dto.ErrorResponseDTO "Internal Server Error <br>error_code: INTERNAL_SERVER_ERROR or INTERNAL_DATABASE_ERROR <br>message: Something went wrong, please try again later"
+// @Failure 504 {object} dto.ErrorResponseDTO "Gateway Timeout <br>error_code: DATABASE_TIMEOUT <br>message: The database operation timed out, please try again"
 // @Router /categories/{id} [put]
 func (h *CategoryHandler) UpdateCategory(c *fiber.Ctx) error {
 	ctx := c.UserContext()
@@ -79,18 +82,18 @@ func (h *CategoryHandler) UpdateCategory(c *fiber.Ctx) error {
 	idParam := c.Params("id")
 	id, err := strconv.ParseUint(idParam, 10, 64)
 	if err != nil {
-		return fiber.NewError(fiber.StatusBadRequest, "parse id param to uint error")
+		return fiber.NewError(fiber.StatusBadRequest, "Invalid ID format. The path parameter 'id' must be a positive integer.")
 	}
 
 	// ผูก Json Body กับ DTO data
 	var input dto.UpdateCategoryInput
 	if err := c.BodyParser(&input); err != nil {
-		return fiber.NewError(fiber.StatusBadRequest, "invalid request body")
+		return fiber.NewError(fiber.StatusBadRequest, "Invalid JSON format.")
 	}
 
 	// ตรวจสอบ Validate tag
 	if err := validate.ValidateStruct(input); err != nil {
-		return fiber.NewError(fiber.StatusBadRequest, "invalid input struct")
+		return fiber.NewError(fiber.StatusBadRequest, "Validation failed for the request data.")
 	}
 
 	// เรียกใช้งาน usecase
@@ -112,10 +115,10 @@ func (h *CategoryHandler) UpdateCategory(c *fiber.Ctx) error {
 // @Accept json
 // @Produce json
 // @Param id path int true "ID ของ Category ที่ต้องการลบ"
-// @Success 200 {object} response.JSONResponse[any] "ลบ Category สำเร็จ"
-// @Failure 400 {object} dto.ErrorResponse "invalid request body หรือ validate struct error body"
-// @Failure 404 {object} dto.ErrorResponse "The requested data was not found"
-// @Failure 500 {object} dto.ErrorResponse "Something went wrong, please try again later."
+// @Failure 400 {object} dto.ErrorResponseDTO "Bad Request <br>error_code: INVALID_INPUT_PARAMETERS <br>Message: Invalid ID format. The path parameter 'id' must be a positive integer."
+// @Failure 499 {object} dto.ErrorResponseDTO "Client Closed Request  <br>error_code: REQUEST_CANCELED <br>message: The request was canceled by the user"
+// @Failure 500 {object} dto.ErrorResponseDTO "Internal Server Error <br>error_code: INTERNAL_SERVER_ERROR or INTERNAL_DATABASE_ERROR <br>message: Something went wrong, please try again later"
+// @Failure 504 {object} dto.ErrorResponseDTO "Gateway Timeout <br>error_code: DATABASE_TIMEOUT <br>message: The database operation timed out, please try again"
 // @Router /categories/{id} [delete]
 func (h *CategoryHandler) DeleteCategory(c *fiber.Ctx) error {
 	ctx := c.UserContext()
@@ -124,7 +127,7 @@ func (h *CategoryHandler) DeleteCategory(c *fiber.Ctx) error {
 	idParam := c.Params("id")
 	id, err := strconv.ParseUint(idParam, 10, 64)
 	if err != nil {
-		return fiber.NewError(fiber.StatusBadRequest, "parse id param to uint error")
+		return fiber.NewError(fiber.StatusBadRequest, "Invalid ID format. The path parameter 'id' must be a positive integer.")
 	}
 
 	// เรียกใช้งาน usecase
@@ -143,16 +146,18 @@ func (h *CategoryHandler) DeleteCategory(c *fiber.Ctx) error {
 // @Accept json
 // @Produce json
 // @Param type query string false "ประเภทของ Category" Enums(income, expense) default(expense)
-// @Success 200 {object} response.JSONResponse[[]dto.CategoryResponse] "ดึงข้อมูล Category สำเร็จ"
-// @Failure 400 {object} dto.ErrorResponse "invalid types parameter"
-// @Failure 500 {object} dto.ErrorResponse "Something went wrong, please try again later."
+// @Success 200 {object} response.JsonResponse[[]dto.CategoryResponse] "FetchCategoriesByType successful <br>message: FetchCategoriesByType successfull"
+// @Failure 400 {object} dto.ErrorResponseDTO "Bad Request <br>error_code: INVALID_INPUT_PARAMETERS <br>message: Invalid query parameter 'type'. Allowed values are 'expense' or 'income'."
+// @Failure 499 {object} dto.ErrorResponseDTO "Client Closed Request  <br>error_code: REQUEST_CANCELED <br>message: The request was canceled by the user"
+// @Failure 500 {object} dto.ErrorResponseDTO "Internal Server Error <br>error_code: INTERNAL_SERVER_ERROR or INTERNAL_DATABASE_ERROR <br>message: Something went wrong, please try again later"
+// @Failure 504 {object} dto.ErrorResponseDTO "Gateway Timeout <br>error_code: DATABASE_TIMEOUT <br>message: The database operation timed out, please try again"
 // @Router /categories [get]
 func (h *CategoryHandler) FetchCategoriesByType(c *fiber.Ctx) error {
 	ctx := c.UserContext()
 
 	types := c.Query("type", "expense")
 	if types != "expense" && types != "income" {
-		return fiber.NewError(fiber.StatusBadRequest, "invalid types parameter")
+		return fiber.NewError(fiber.StatusBadRequest, "Invalid query parameter 'type'. Allowed values are 'expense' or 'income'.")
 	}
 
 	// เรียกใช้งาน Usecase
