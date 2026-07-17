@@ -4,23 +4,23 @@ import "github.com/Jaruvat303/cashlog/internal/domain"
 
 // CategoryResponse - ข้อมูลส่งออกกลับไปให้ Client (Response Body)
 type CategoryResponse struct {
-	ID       int64  `json:"id"`
-	Name     string `json:"name"`
-	Type     string `json:"type"`
-	IconKey  string `json:"icon_key"`
-	ColorHex string `json:"color_hex"`
+	ID       int64  `json:"id" example:"1"`
+	Name     string `json:"name" example:"อาหาร"`
+	Type     string `json:"type" example:"expense"`
+	IconKey  string `json:"icon_key" example:"food"`
+	ColorHex string `json:"color_hex" example:"#FF0000"`
 }
 
 // CreateCategoryInput - ข้อมูลนำเข้าสำหรับสร้างหมวดหมู่ (Request Body)
 type CreateCategoryInput struct {
-	Name string `json:"name" validate:"required,min=2,max=50"`
-	Type string `json:"type" validate:"required,oneof=income expense"`
+	Name string `json:"name" validate:"required,min=2,max=50" example:"อาหาร"`
+	Type string `json:"type" validate:"required,oneof=income expense" example:"expense"`
 }
 
 // UpdateCategoryInput - ข้อมูลนำเข้าสำหรับอัปเดตหมวดหมู่ (Request Body)
 type UpdateCategoryInput struct {
-	Name *string `json:"name" validate:"omitempty,min=3,max=50"`
-	Type *string `json:"type" validate:"omitempty,oneof=income expense"`
+	Name *string `json:"name" validate:"omitempty,min=3,max=50" example:"อาหาร"`
+	Type *string `json:"type" validate:"omitempty,oneof=income expense" example:"expense"`
 }
 
 // ToDomainCreateParam แปลงข้อมูลจาก DTO เป็น Domain Param
