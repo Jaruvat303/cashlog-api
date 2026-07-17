@@ -12,7 +12,7 @@ type Transaction struct {
 	ReceiverName    string    `gorm:"type:varchar(255)"`
 	Note            string    `gorm:"type:text"`
 	CategoryID      int64     `gorm:"not null"`
-	Category        Category  `gorm:"foreignKey:CategoryID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT;"`
+	Category        Category  `gorm:"foreignKey:CategoryID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT;"`
 	LocalImageName  string    `gorm:"type:varchar(255)"`
 	TransactionDate time.Time `gorm:"not null"`
 	CreatedAt       time.Time `gorm:"autoCreateTime;not null"`
