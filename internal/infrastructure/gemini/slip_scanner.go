@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/Jaruvat303/cashlog/internal/domain"
 	"google.golang.org/genai"
@@ -12,7 +13,7 @@ import (
 // slipScanPrompt คือ instruction ที่บอก Gemini ว่าต้องอ่านฟิลด์ไหนจากสลิป
 // และกฎการตอบเมื่ออ่านไม่ออก (ห้ามเดา/แต่งข้อมูล)
 const slipScanPrompt = `คุณคือระบบอ่านข้อมูลจากภาพสลิปโอนเงินผ่าน mobile banking ของธนาคารไทย
- 
+
 จากภาพที่ให้มา ให้ดึงข้อมูลต่อไปนี้:
 - amount: จำนวนเงินที่โอน (ตัวเลขล้วน ไม่มีคอมม่าหรือสัญลักษณ์สกุลเงิน)
 - sender_name: ชื่อบัญชีต้นทาง (ผู้โอน) ตามที่ปรากฏในสลิป
@@ -28,7 +29,6 @@ const slipScanPrompt = `คุณคือระบบอ่านข้อม�
 - สลิปแสดง: "06 ก.ค. 2569 18:30"   -> trans_time: "2026-07-06 18:30:00"
 - สลิปแสดง: "06 Jul 2026, 18:30:15" -> trans_time: "2026-07-06 18:30:15"
 - สลิปแสดง: "2026/07/06 18:30"      -> trans_time: "2026-07-06 18:30:00"
- 
 กฎสำคัญ:
 1. ถ้าฟิลด์ไหนอ่านไม่ออกหรือไม่มีในภาพ ให้ตอบค่าว่าง ("" สำหรับ string หรือ 0 สำหรับ number)
    ห้ามเดาหรือแต่งข้อมูลขึ้นเองโดยเด็ดขาด
@@ -72,16 +72,27 @@ func (c *Client) ExtractData(ctx context.Context, imageBytes []byte) (*domain.Ge
 
 	resp, err := c.genaiClient.Models.GenerateContent(ctx, c.modelName, contents, config)
 	if err != nil {
-		return nil, fmt.Errorf("gemini: generate content failed: %w", err)
+		errStr := err.Error()
+
+		// ตรวจสอบว่า error ที่เกิดขึ้นเป็นปัญหาเกี่ยวกับ Quota หรือไม่
+		if strings.Contains(errStr, "RESOURCE_EXHAUSTED") ||
+			strings.Contains(errStr, "QUOTA_LIMIT_EXCEEDED") ||
+			strings.Contains(errStr, "credits are depleted") ||
+			strings.Contains(errStr, "429") {
+			return nil, fmt.Errorf("%w: %v", domain.ErrGeminiQuotaExhausted, err)
+		}
+
+		// Error อื่นๆ จาก Gemini
+		return nil, fmt.Errorf("%w: %v", domain.ErrGeminiUnavailable, err)
 	}
 
 	if resp == nil || resp.Text() == "" {
-		return nil, fmt.Errorf("gemini: empty response from model")
+		return nil, domain.ErrGeminiEmptyResponse
 	}
 
 	var data domain.GeminiSlipData
 	if err := json.Unmarshal([]byte(resp.Text()), &data); err != nil {
-		return nil, fmt.Errorf("gemini: failed to parse response json: %w", err)
+		return nil, fmt.Errorf("%w: %v", domain.ErrSlipParseFailed, err)
 	}
 
 	return &data, nil

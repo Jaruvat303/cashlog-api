@@ -81,6 +81,21 @@ func NewGlobalErrorHandler(appLogger logger.Logger) fiber.ErrorHandler {
 				statusCode = fiber.StatusInternalServerError
 				errorCode = "INTERNAL_DATABASE_ERROR"
 				clientMessage = "Something went wrong, please try again later."
+
+			case errors.Is(err, domain.ErrGeminiQuotaExhausted):
+				statusCode = fiber.StatusServiceUnavailable // หรือ 429 / 503
+				errorCode = "GEMINI_QUOTA_EXHAUSTED"
+				clientMessage = "AI scanning service is currently unavailable due to quota limits."
+
+			case errors.Is(err, domain.ErrGeminiUnavailable), errors.Is(err, domain.ErrGeminiEmptyResponse):
+				statusCode = fiber.StatusBadGateway
+				errorCode = "GEMINI_SERVICE_ERROR"
+				clientMessage = "Unable to process slip image with AI service at the moment."
+
+			case errors.Is(err, domain.ErrSlipParseFailed):
+				statusCode = fiber.StatusUnprocessableEntity
+				errorCode = "SLIP_PARSE_FAILED"
+				clientMessage = "Failed to extract clear transaction details from the slip."
 			}
 		}
 
