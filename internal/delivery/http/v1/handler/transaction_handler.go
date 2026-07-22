@@ -247,7 +247,7 @@ func (h *TransactionHandler) DeleteTransaction(c *fiber.Ctx) error {
 	idParam := c.Params("id")
 	id, err := strconv.ParseUint(idParam, 10, 64)
 	if err != nil {
-		return fiber.NewError(fiber.StatusBadRequest, "parse id param to uint error")
+		return fiber.NewError(fiber.StatusBadRequest, "Invalid ID format. The path parameter 'id' must be a positive integer.")
 	}
 
 	// เรียกใช้งาน transaction usecase

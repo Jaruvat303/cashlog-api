@@ -45,7 +45,7 @@ func TestDashboardSummary(t *testing.T) {
 				// usecase ต้องไม่ทำงาน ในก่ารทดสอบนี
 			},
 			expectedStatus: fiber.StatusBadRequest,
-			expectedBody:   "invalid scope parameter",
+			expectedBody:   "Invalid query parameter 'scope'. Allowed values are 'monthly' or 'yearly'.",
 		},
 		{
 			name: "2. Success - รับค่าพารามิเตอร์ปกติ และ usecase ทำงานสำเร็จ",
@@ -223,7 +223,7 @@ func TestUpdateTransaction(t *testing.T) {
 				// usecase จะยังไม่ทำงาน
 			},
 			expectedStatus: fiber.StatusBadRequest,
-			expectedBody:   "parse id param to uint error",
+			expectedBody:   "Invalid ID format. The path parameter 'id' must be a positive integer.",
 		},
 		{
 			name:        "2. Bad Request - JSON Body รูปแบบไม่ถูกต้อง แกะข้อมูลไม่ได้",
@@ -233,7 +233,7 @@ func TestUpdateTransaction(t *testing.T) {
 				// usecase จะยังไม่ทำงาน
 			},
 			expectedStatus: fiber.StatusBadRequest,
-			expectedBody:   "invalid request body",
+			expectedBody:   "Invalid JSON format.",
 		},
 		{
 			name:    "3. Bad Request - ข้อมูลไม่ผ่าน Tag Validation",
@@ -243,7 +243,7 @@ func TestUpdateTransaction(t *testing.T) {
 			},
 			setupMock:      func(uc *domain.TransactionUsecaseMock) {},
 			expectedStatus: fiber.StatusBadRequest,
-			expectedBody:   "validation struct error",
+			expectedBody:   "Validation failed for the request data.",
 		},
 
 		{
@@ -360,7 +360,7 @@ func TestDeleteTransaction(t *testing.T) {
 				// usecase จะยังไม่ทำงาน
 			},
 			expectedStatus: fiber.StatusBadRequest,
-			expectedBody:   "parse id param to uint error",
+			expectedBody:   "Invalid ID format. The path parameter 'id' must be a positive integer.",
 		},
 
 		{
@@ -440,7 +440,7 @@ func TestUplaodSlipAndLog(t *testing.T) {
 				// usecase จะยังไม่ทำงานใน case นี้
 			},
 			expectedStatus: fiber.StatusBadRequest,
-			expectedBody:   "The field `local_image_name` is required.",
+			expectedBody:   "Missing required form field 'local_image_name'.",
 		},
 		{
 			name:      "2. Validation Failed - on image file",
@@ -450,7 +450,7 @@ func TestUplaodSlipAndLog(t *testing.T) {
 				// usecase จะไม่ทำงานใน case นี้
 			},
 			expectedStatus: fiber.StatusBadRequest,
-			expectedBody:   "The `image` flie is required in multipart/form-data.",
+			expectedBody:   "Missing required file 'image' in multipart/form-data request.",
 		},
 		{
 			name:      "3. Succes - Create Sucess New Data",
