@@ -69,7 +69,7 @@ func (g *gormTransactionRepository) CalculateSummary(ctx context.Context, startD
 		Table("transactions").
 		Select(`
 		transactions.category_id,
-		COALESCE(categories.name, 'Uncategorized') as category_name, 
+		COALESCE(categories.name, 'Uncategorized') as category_name,
         COALESCE(categories.icon_url, ?) as icon_url,
 		transactions.transaction_type,
 		SUM(transactions.amount)as total_amount
@@ -118,7 +118,7 @@ func (g *gormTransactionRepository) FetchByTimeRange(ctx context.Context, startD
 	err := g.db.WithContext(ctx).
 		Table("transactions").
 		Where("transaction_date BETWEEN ? AND ?", startDate, endDate).
-		Order("transaction_id DESC").
+		Order("transaction_date DESC,id DESC").
 		Find(&txs).Error
 
 	if err != nil {
@@ -126,8 +126,6 @@ func (g *gormTransactionRepository) FetchByTimeRange(ctx context.Context, startD
 	}
 	return txs, nil
 }
-
-
 
 // Insert implements [domain.TransactionRepository]. บันทึกรายการลงในฐานข้อมูล
 func (g *gormTransactionRepository) Insert(ctx context.Context, tx *domain.Transaction) error {
