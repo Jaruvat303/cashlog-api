@@ -45,7 +45,7 @@ func TestCreateCategoryHandler(t *testing.T) {
 			requestBody:    "{ invalid json }",
 			setupMock:      func(uc *domain.CategoryUsecaseMock) {},
 			expectedStatus: fiber.StatusBadRequest,
-			expectedBody:   "invalid request body",
+			expectedBody:   "Invalid JSON format.",
 		},
 		{
 			name: "Bad Request - ข้อมูลไม่ผ่าน Validation Struct",
@@ -54,7 +54,7 @@ func TestCreateCategoryHandler(t *testing.T) {
 			},
 			setupMock:      func(uc *domain.CategoryUsecaseMock) {},
 			expectedStatus: fiber.StatusBadRequest,
-			expectedBody:   "validate struct error body",
+			expectedBody:   "Validation failed for the request data.",
 		},
 		{
 			name:        "Internal Error - Usecase ทำงานผิดพลาด",
