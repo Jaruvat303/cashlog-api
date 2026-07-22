@@ -4,17 +4,15 @@ import (
 	"context"
 	"testing"
 
-	"github.com/Jaruvat303/cashlog/internal/delivery/http/v1/dto"
 	"github.com/Jaruvat303/cashlog/internal/domain"
 	"github.com/Jaruvat303/cashlog/internal/usecase"
-	"github.com/Jaruvat303/cashlog/pkg"
 	"github.com/Jaruvat303/cashlog/pkg/logger"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
 
 func TestCreateCategory(t *testing.T) {
-	mockInput := dto.CreateCategoryInput{
+	mockInput := domain.CreateCategoryParam{
 		Name: "food",
 		Type: "expense",
 	}
@@ -26,13 +24,16 @@ func TestCreateCategory(t *testing.T) {
 
 	tests := []struct {
 		name          string
-		input         dto.CreateCategoryInput
+		input         domain.CreateCategoryParam
 		setupMock     func(repo *domain.CategoryRepositoryMock)
 		expectedError error
 	}{
 		{
-			name:  "1. Success - สร้างข้อมูล Category สำเร็จ",
-			input: mockInput,
+			name: "1. Success - สร้างข้อมูล Category สำเร็จ",
+			input: domain.CreateCategoryParam{
+				Name: mockInput.Name,
+				Type: mockInput.Type,
+			},
 			setupMock: func(repo *domain.CategoryRepositoryMock) {
 				repo.On("Create", mock.Anything, mockCat).Return(nil)
 			},
@@ -60,12 +61,13 @@ func TestCreateCategory(t *testing.T) {
 			uc := usecase.NewCategoryUsecase(mockRepo, mockLog)
 
 			// Act
-			err := uc.CreateCategory(ctx, tt.input)
+			result, err := uc.CreateCategory(ctx, tt.input)
 
 			if tt.expectedError != nil {
 				assert.Error(t, err, tt.expectedError)
 			} else {
 				assert.NoError(t, err)
+				assert.NotNil(t, result)
 			}
 
 			mockRepo.AssertExpectations(t)
@@ -74,8 +76,8 @@ func TestCreateCategory(t *testing.T) {
 }
 
 func TestUpdateCategory(t *testing.T) {
-	mockInput := dto.UpdateCategoryInput{
-		Name: pkg.PTR("update food"),
+	mockInput := domain.UpdateCategoryParam{
+		Name: "update food",
 	}
 
 	mockCategpry := &domain.Category{
@@ -86,14 +88,14 @@ func TestUpdateCategory(t *testing.T) {
 
 	mockResult := &domain.Category{
 		ID:   1,
-		Name: *mockInput.Name,
+		Name: mockInput.Name,
 		Type: mockCategpry.Type,
 	}
 
 	tests := []struct {
 		name           string
 		id             uint
-		input          dto.UpdateCategoryInput
+		input          domain.UpdateCategoryParam
 		setupMock      func(repo *domain.CategoryRepositoryMock)
 		expectedResult *domain.Category
 		expectedError  bool
@@ -101,7 +103,7 @@ func TestUpdateCategory(t *testing.T) {
 		{
 			name:  "1. Error Notfound - Category ID ไม่พบข้อมูลที่จะแก่ไข",
 			id:    99,
-			input: dto.UpdateCategoryInput{},
+			input: domain.UpdateCategoryParam{},
 			setupMock: func(repo *domain.CategoryRepositoryMock) {
 				repo.On("GetByID", mock.Anything, uint(99)).Return(nil, domain.ErrNotFound)
 			},

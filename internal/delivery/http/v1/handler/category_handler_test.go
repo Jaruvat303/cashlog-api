@@ -20,7 +20,9 @@ import (
 )
 
 func TestCreateCategoryHandler(t *testing.T) {
-	validInput := dto.CreateCategoryInput{Name: "Food", Type: "EXPENSE"}
+	validInput := dto.CreateCategoryInput{Name: "Food", Type: "expense"}
+
+	mockResult := &domain.Category{ID: 1, Name: "Food", Type: "expense"}
 
 	tests := []struct {
 		name           string
@@ -33,7 +35,7 @@ func TestCreateCategoryHandler(t *testing.T) {
 			name:        "Success - สร้าง Category สำเร็จ",
 			requestBody: validInput,
 			setupMock: func(uc *domain.CategoryUsecaseMock) {
-				uc.On("CreateCategory", mock.Anything, validInput).Return(nil)
+				uc.On("CreateCategory", mock.Anything, validInput.ToDomainCreateParam()).Return(mockResult, nil)
 			},
 			expectedStatus: fiber.StatusCreated,
 			expectedBody:   `"success":true`,
@@ -58,7 +60,7 @@ func TestCreateCategoryHandler(t *testing.T) {
 			name:        "Internal Error - Usecase ทำงานผิดพลาด",
 			requestBody: validInput,
 			setupMock: func(uc *domain.CategoryUsecaseMock) {
-				uc.On("CreateCategory", mock.Anything, validInput).Return(errors.New("db error"))
+				uc.On("CreateCategory", mock.Anything, validInput.ToDomainCreateParam()).Return(nil, errors.New("db error"))
 			},
 			expectedStatus: fiber.StatusInternalServerError,
 			expectedBody:   "db error",
@@ -114,7 +116,7 @@ func TestUpdateCategoryHandler(t *testing.T) {
 			paramID:     "1",
 			requestBody: validInput,
 			setupMock: func(uc *domain.CategoryUsecaseMock) {
-				uc.On("UpdateCategory", mock.Anything, uint(1), validInput).Return(mockResult, nil)
+				uc.On("UpdateCategory", mock.Anything, uint(1), validInput.ToDomainUpdateParam()).Return(mockResult, nil)
 			},
 			expectedStatus: fiber.StatusOK,
 			expectedBody:   `"success":true`,
@@ -140,7 +142,7 @@ func TestUpdateCategoryHandler(t *testing.T) {
 			paramID:     "1",
 			requestBody: validInput,
 			setupMock: func(uc *domain.CategoryUsecaseMock) {
-				uc.On("UpdateCategory", mock.Anything, uint(1), validInput).Return(nil, errors.New("something went wrong"))
+				uc.On("UpdateCategory", mock.Anything, uint(1), validInput.ToDomainUpdateParam()).Return(nil, errors.New("something went wrong"))
 			},
 			expectedStatus: fiber.StatusInternalServerError,
 			expectedBody:   "something went wrong",
@@ -249,12 +251,12 @@ func TestFetchCategoriesByTypeHandler(t *testing.T) {
 		},
 		{
 			name: "Bad Request - Query Parameter ไม่ถูกต้อง",
-			url: "/categories?type=wrongType",
+			url:  "/categories?type=wrongType",
 			setupMock: func(uc *domain.CategoryUsecaseMock) {
 				// usecase จะไม่ทำงาน
 			},
 			expectedStatus: fiber.StatusBadRequest,
-			expectedBody: "invalid types parameter",
+			expectedBody:   "invalid types parameter",
 		},
 		{
 			name: "Internal Error - Usecase ดึงข้อมูลจากฐานข้อมูลไม่ได้",

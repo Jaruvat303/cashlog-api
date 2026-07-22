@@ -18,6 +18,16 @@ import (
 	"go.uber.org/zap"
 )
 
+// @title CashLog API
+// @version 1.0
+// @description API บริการหลังบ้านสำหรับจัดการบันทึกรายรับรายจ่ายและวิเคราะห์สลิปด้วย Gemini AI
+// @termsOfService http://swagger.io/terms/
+
+// @contact.name API Support
+// @contact.email jaruvat.see@gmail.com
+
+// @BasePath /
+
 func main() {
 	// Load Config
 	cfg := config.LoadConfig()
@@ -62,7 +72,7 @@ func main() {
 
 	app := fiber.New(fiber.Config{
 		AppName:      "CashLog API v1.0",
-		ErrorHandler: router.NewGlobalErrorHandler(appLogger),
+		ErrorHandler: middleware.NewGlobalErrorHandler(appLogger),
 	})
 
 	// Middleware Setting

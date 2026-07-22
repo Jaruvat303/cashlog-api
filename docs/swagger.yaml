@@ -1,0 +1,531 @@
+basePath: /
+definitions:
+  github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto.CategoryBreakdownDTO:
+    properties:
+      category_id:
+        type: integer
+      category_name:
+        type: string
+      color_hex:
+        description: เก็บโค้ดสี เช่น "#EF4444"
+        type: string
+      icon_key:
+        description: เก็บชื่อกลาง เช่น "utensils", "zap", "wallet"
+        type: string
+      total_amount:
+        type: number
+    type: object
+  github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto.CategoryResponse:
+    properties:
+      color_hex:
+        example: '#FF0000'
+        type: string
+      icon_key:
+        example: food
+        type: string
+      id:
+        example: 1
+        type: integer
+      name:
+        example: อาหาร
+        type: string
+      type:
+        example: expense
+        type: string
+    type: object
+  github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto.CreateCategoryInput:
+    properties:
+      name:
+        example: อาหาร
+        maxLength: 50
+        minLength: 2
+        type: string
+      type:
+        enum:
+        - income
+        - expense
+        example: expense
+        type: string
+    required:
+    - name
+    - type
+    type: object
+  github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto.DashboardSummaryResponse:
+    properties:
+      expense:
+        items:
+          $ref: '#/definitions/github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto.CategoryBreakdownDTO'
+        type: array
+      income:
+        items:
+          $ref: '#/definitions/github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto.CategoryBreakdownDTO'
+        type: array
+      month:
+        type: integer
+      scope:
+        type: string
+      total_expense:
+        type: number
+      total_income:
+        type: number
+      year:
+        type: integer
+    type: object
+  github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto.EmptyData:
+    type: object
+  github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto.ErrorResponseDTO:
+    properties:
+      error_code:
+        example: ERROR_CODE_HERE
+        type: string
+      message:
+        example: ข้อความอธิบายความผิดพลาดตามสถานการณ์
+        type: string
+      success:
+        example: false
+        type: boolean
+    type: object
+  github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto.TransactionCategoryInfo:
+    properties:
+      color_hex:
+        example: '#EF4444'
+        type: string
+      icon_key:
+        example: utensils
+        type: string
+      id:
+        example: 3
+        type: integer
+      name:
+        example: อาหารและเครื่องดื่ม
+        type: string
+      type:
+        example: expense
+        type: string
+    type: object
+  github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto.TransactionResponse:
+    properties:
+      amount:
+        example: 350.5
+        type: number
+      category:
+        allOf:
+        - $ref: '#/definitions/github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto.TransactionCategoryInfo'
+        description: แนบข้อมูลหมวดหมู่ย่อยแบบ Nested Object
+      id:
+        example: 102
+        type: integer
+      local_image_name:
+        example: slip_20260714_xyz.jpg
+        type: string
+      note:
+        example: มื้อเที่ยงกับทีมงาน
+        type: string
+      receiver_name:
+        example: ร้านข้าวมันไก่ป้าใจ
+        type: string
+      transaction_date:
+        example: "2026-07-14T12:30:00+07:00"
+        type: string
+      transaction_type:
+        example: expense
+        type: string
+    type: object
+  github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto.UpdateCategoryInput:
+    properties:
+      name:
+        example: อาหาร
+        maxLength: 50
+        minLength: 3
+        type: string
+      type:
+        enum:
+        - income
+        - expense
+        example: expense
+        type: string
+    type: object
+  github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto.UpdateTransactionInput:
+    properties:
+      amount:
+        type: number
+      category_id:
+        type: integer
+      note:
+        maxLength: 255
+        type: string
+      transaction_date:
+        type: string
+    type: object
+  ? github_com_Jaruvat303_cashlog_pkg_response.JsonResponse-array_github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto_CategoryResponse
+  : properties:
+      data:
+        items:
+          $ref: '#/definitions/github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto.CategoryResponse'
+        type: array
+      message:
+        type: string
+      success:
+        example: true
+        type: boolean
+    type: object
+  ? github_com_Jaruvat303_cashlog_pkg_response.JsonResponse-github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto_CategoryResponse
+  : properties:
+      data:
+        $ref: '#/definitions/github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto.CategoryResponse'
+      message:
+        type: string
+      success:
+        example: true
+        type: boolean
+    type: object
+  ? github_com_Jaruvat303_cashlog_pkg_response.JsonResponse-github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto_DashboardSummaryResponse
+  : properties:
+      data:
+        $ref: '#/definitions/github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto.DashboardSummaryResponse'
+      message:
+        type: string
+      success:
+        example: true
+        type: boolean
+    type: object
+  github_com_Jaruvat303_cashlog_pkg_response.JsonResponse-github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto_EmptyData:
+    properties:
+      data:
+        $ref: '#/definitions/github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto.EmptyData'
+      message:
+        type: string
+      success:
+        example: true
+        type: boolean
+    type: object
+  ? github_com_Jaruvat303_cashlog_pkg_response.JsonResponse-github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto_TransactionResponse
+  : properties:
+      data:
+        $ref: '#/definitions/github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto.TransactionResponse'
+      message:
+        type: string
+      success:
+        example: true
+        type: boolean
+    type: object
+  ? github_com_Jaruvat303_cashlog_pkg_response.PaginatedResponse-github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto_TransactionResponse
+  : properties:
+      data:
+        items:
+          $ref: '#/definitions/github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto.TransactionResponse'
+        type: array
+      message:
+        type: string
+      meta:
+        $ref: '#/definitions/github_com_Jaruvat303_cashlog_pkg_response.PaginationMeta'
+      success:
+        example: true
+        type: boolean
+    type: object
+  github_com_Jaruvat303_cashlog_pkg_response.PaginationMeta:
+    properties:
+      current_page:
+        example: 1
+        type: integer
+      page_size:
+        example: 10
+        type: integer
+      total_items:
+        example: 100
+        type: integer
+      total_pages:
+        example: 10
+        type: integer
+    type: object
+info:
+  contact:
+    email: jaruvat.see@gmail.com
+    name: API Support
+  description: API บริการหลังบ้านสำหรับจัดการบันทึกรายรับรายจ่ายและวิเคราะห์สลิปด้วย
+    Gemini AI
+  termsOfService: http://swagger.io/terms/
+  title: CashLog API
+  version: "1.0"
+paths:
+  /categories:
+    get:
+      consumes:
+      - application/json
+      description: ดึงข้อมูล Category ตามประเภท โดยต้องระบุประเภทของ Category (income
+        หรือ expense)
+      parameters:
+      - default: expense
+        description: ประเภทของ Category
+        enum:
+        - income
+        - expense
+        in: query
+        name: type
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'FetchCategoriesByType successful <br>message: FetchCategoriesByType
+            successfull'
+          schema:
+            $ref: '#/definitions/github_com_Jaruvat303_cashlog_pkg_response.JsonResponse-array_github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto_CategoryResponse'
+        "400":
+          description: 'Bad Request <br>error_code: INVALID_INPUT_PARAMETERS <br>message:
+            Invalid query parameter ''type''. Allowed values are ''expense'' or ''income''.'
+          schema:
+            $ref: '#/definitions/github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto.ErrorResponseDTO'
+        "499":
+          description: 'Client Closed Request  <br>error_code: REQUEST_CANCELED <br>message:
+            The request was canceled by the user'
+          schema:
+            $ref: '#/definitions/github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto.ErrorResponseDTO'
+        "500":
+          description: 'Internal Server Error <br>error_code: INTERNAL_SERVER_ERROR
+            or INTERNAL_DATABASE_ERROR <br>message: Something went wrong, please try
+            again later'
+          schema:
+            $ref: '#/definitions/github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto.ErrorResponseDTO'
+        "504":
+          description: 'Gateway Timeout <br>error_code: DATABASE_TIMEOUT <br>message:
+            The database operation timed out, please try again'
+          schema:
+            $ref: '#/definitions/github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto.ErrorResponseDTO'
+      summary: ดึงข้อมูล Category ตามประเภท
+      tags:
+      - Category
+    post:
+      consumes:
+      - application/json
+      description: สร้าง Category ใหม่ โดยต้องระบุชื่อและประเภทของ Category
+      parameters:
+      - description: ข้อมูลสำหรับสร้าง Category
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto.CreateCategoryInput'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: create category successfull
+          schema:
+            $ref: '#/definitions/github_com_Jaruvat303_cashlog_pkg_response.JsonResponse-github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto_CategoryResponse'
+        "400":
+          description: 'Bad Request  <br>error_code: INVALID_INPUT_PARAMETERS <br>message:
+            1. Invalid JSON format.  2. Validation failed for the request data.'
+          schema:
+            $ref: '#/definitions/github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto.ErrorResponseDTO'
+        "499":
+          description: 'Client Closed Request  <br>error_code: REQUEST_CANCELED <br>message:
+            The request was canceled by the user'
+          schema:
+            $ref: '#/definitions/github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto.ErrorResponseDTO'
+        "500":
+          description: 'Internal Server Error <br>error_code: INTERNAL_SERVER_ERROR
+            or INTERNAL_DATABASE_ERROR <br>message: Something went wrong, please try
+            again later'
+          schema:
+            $ref: '#/definitions/github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto.ErrorResponseDTO'
+        "504":
+          description: 'Gateway Timeout <br>error_code: DATABASE_TIMEOUT <br>message:
+            The database operation timed out, please try again'
+          schema:
+            $ref: '#/definitions/github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto.ErrorResponseDTO'
+      summary: สร้าง Category ใหม่
+      tags:
+      - Category
+  /categories/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: ลบ Category โดยต้องระบุ ID ของ Category ที่ต้องการลบ
+      parameters:
+      - description: ID ของ Category ที่ต้องการลบ
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "400":
+          description: 'Bad Request <br>error_code: INVALID_INPUT_PARAMETERS <br>Message:
+            Invalid ID format. The path parameter ''id'' must be a positive integer.'
+          schema:
+            $ref: '#/definitions/github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto.ErrorResponseDTO'
+        "499":
+          description: 'Client Closed Request  <br>error_code: REQUEST_CANCELED <br>message:
+            The request was canceled by the user'
+          schema:
+            $ref: '#/definitions/github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto.ErrorResponseDTO'
+        "500":
+          description: 'Internal Server Error <br>error_code: INTERNAL_SERVER_ERROR
+            or INTERNAL_DATABASE_ERROR <br>message: Something went wrong, please try
+            again later'
+          schema:
+            $ref: '#/definitions/github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto.ErrorResponseDTO'
+        "504":
+          description: 'Gateway Timeout <br>error_code: DATABASE_TIMEOUT <br>message:
+            The database operation timed out, please try again'
+          schema:
+            $ref: '#/definitions/github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto.ErrorResponseDTO'
+      summary: ลบ Category
+      tags:
+      - Category
+    put:
+      consumes:
+      - application/json
+      description: อัปเดตข้อมูล Category โดยต้องระบุ ID ของ Category ที่ต้องการอัปเดต
+      parameters:
+      - description: ID ของ Category ที่ต้องการอัปเดต
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: ข้อมูลสำหรับอัปเดต Category
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto.UpdateCategoryInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: update category successfull
+          schema:
+            $ref: '#/definitions/github_com_Jaruvat303_cashlog_pkg_response.JsonResponse-github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto_CategoryResponse'
+        "400":
+          description: 'Bad Request  <br>error_code: INVALID_INPUT_PARAMETERS <br>message:
+            1. Invalid ID format (must be a positive integer) 2. Invalid JSON format
+            3. Validation failed for the request data'
+          schema:
+            $ref: '#/definitions/github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto.ErrorResponseDTO'
+        "499":
+          description: 'Client Closed Request  <br>error_code: REQUEST_CANCELED <br>message:
+            The request was canceled by the user'
+          schema:
+            $ref: '#/definitions/github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto.ErrorResponseDTO'
+        "500":
+          description: 'Internal Server Error <br>error_code: INTERNAL_SERVER_ERROR
+            or INTERNAL_DATABASE_ERROR <br>message: Something went wrong, please try
+            again later'
+          schema:
+            $ref: '#/definitions/github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto.ErrorResponseDTO'
+        "504":
+          description: 'Gateway Timeout <br>error_code: DATABASE_TIMEOUT <br>message:
+            The database operation timed out, please try again'
+          schema:
+            $ref: '#/definitions/github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto.ErrorResponseDTO'
+      summary: อัปเดต Category
+      tags:
+      - Category
+  /transactions/dashboard-summary:
+    get:
+      consumes:
+      - application/json
+      description: ดึงข้อมูลสรุปรายรับ-รายจ่ายประจำเดือนหรือรายปี โดยสามารถระบุช่วงเวลาได้ผ่าน
+        Query Parameters
+      parameters:
+      - default: monthly
+        description: ช่วงเวลาที่ต้องการดึงข้อมูล
+        enum:
+        - monthly
+        - yearly
+        in: query
+        name: scope
+        type: string
+      - description: เดือนที่ต้องการดึงข้อมูล (1-12)
+        in: query
+        name: month
+        type: integer
+      - description: ปีที่ต้องการดึงข้อมูล
+        in: query
+        name: year
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Dashboard summary fetched successfully
+          schema:
+            $ref: '#/definitions/github_com_Jaruvat303_cashlog_pkg_response.JsonResponse-github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto_DashboardSummaryResponse'
+        "400":
+          description: 'Bad Request  <br>error_code: INVALID_INPUT_PARAMETERS <br>message:
+            Invalid query parameter ''scope''. Allowed values are ''monthly'' or ''yearly''.'
+          schema:
+            $ref: '#/definitions/github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto.ErrorResponseDTO'
+        "499":
+          description: 'Client Closed Request  <br>error_code: REQUEST_CANCELED <br>message:
+            The request was canceled by the user'
+          schema:
+            $ref: '#/definitions/github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto.ErrorResponseDTO'
+        "500":
+          description: 'Internal Server Error <br>error_code: INTERNAL_SERVER_ERROR
+            or INTERNAL_DATABASE_ERROR <br>message: Something went wrong, please try
+            again later'
+          schema:
+            $ref: '#/definitions/github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto.ErrorResponseDTO'
+        "504":
+          description: 'Gateway Timeout <br>error_code: DATABASE_TIMEOUT <br>message:
+            The database operation timed out, please try again'
+          schema:
+            $ref: '#/definitions/github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto.ErrorResponseDTO'
+      summary: ดึงข้อมูลสรุปรายรับ-รายจ่ายประจำเดือนหรือรายปี
+      tags:
+      - Transaction
+  /transactions/monthly-history:
+    get:
+      consumes:
+      - application/json
+      description: ดึงข้อมูล Transaction ตามเวลาที่กำหนด โดยสามารถระบุปี เดือน และการแบ่งหน้า
+        (Pagination) ได้ผ่าน Query Parameters
+      parameters:
+      - description: ปีที่ต้องการดึงข้อมูล
+        in: query
+        name: year
+        type: integer
+      - description: เดือนที่ต้องการดึงข้อมูล (1-12)
+        in: query
+        name: month
+        type: integer
+      - default: 1
+        description: หน้าที่ต้องการดึงข้อมูล
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: จำนวนรายการต่อหน้า
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: ดึงข้อมูล Transaction สำเร็จ
+          schema:
+            $ref: '#/definitions/github_com_Jaruvat303_cashlog_pkg_response.PaginatedResponse-github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto_TransactionResponse'
+        "499":
+          description: 'Client Closed Request  <br>error_code: REQUEST_CANCELED <br>message:
+            The request was canceled by the user'
+          schema:
+            $ref: '#/definitions/github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto.ErrorResponseDTO'
+        "500":
+          description: 'Internal Server Error <br>error_code: INTERNAL_SERVER_ERROR
+            or INTERNAL_DATABASE_ERROR <br>message: Something went wrong, please try
+            again later'
+          schema:
+            $ref: '#/definitions/github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto.ErrorResponseDTO'
+        "504":
+          description: 'Gateway Timeout <br>error_code: DATABASE_TIMEOUT <br>message:
+            The database operation timed out, please try again'
+          schema:
+            $ref: '#/definitions/github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto.ErrorResponseDTO'
+      summary: ดึงข้อมูล Transaction ตามเวลาที่กำหนด
+      tags:
+      - Transaction
+swagger: "2.0"

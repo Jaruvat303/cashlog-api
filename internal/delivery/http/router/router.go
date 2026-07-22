@@ -7,6 +7,9 @@ import (
 	"github.com/Jaruvat303/cashlog/internal/delivery/http/v1/handler"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/monitor"
+	"github.com/gofiber/swagger"
+
+	_ "github.com/Jaruvat303/cashlog/docs"
 )
 
 func SetupRoutes(app *fiber.App,

@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/Jaruvat303/cashlog/internal/delivery/http/v1/dto"
 	"github.com/Jaruvat303/cashlog/internal/domain"
 	"github.com/Jaruvat303/cashlog/pkg/logger"
 	"github.com/Jaruvat303/cashlog/pkg/timeutil"
@@ -60,7 +59,7 @@ func (t *transactionUsecase) DeleteTransaction(ctx context.Context, id uint) err
 }
 
 // UpdateTransaction implements [domain.TransactionUsecase].
-func (t *transactionUsecase) UpdateTransaction(ctx context.Context, id uint, input dto.UpdateTransactionInput) (*domain.Transaction, error) {
+func (t *transactionUsecase) UpdateTransaction(ctx context.Context, id uint, input domain.UpdateTransactionParam) (*domain.Transaction, error) {
 	log := logger.Ctx(ctx)
 	if log == nil {
 		// ให้หันไปใช้ Logger ตัวที่สืบทอดมาจาก Constructor แทน ป้องกันแอปพัง (Panic)
@@ -139,21 +138,52 @@ func (t *transactionUsecase) UpdateTransaction(ctx context.Context, id uint, inp
 }
 
 // FetchByTimeRange implements [domain.TransactionUsecase].
-func (t *transactionUsecase) GetMonthlyHistory(ctx context.Context, month, year int) ([]domain.Transaction, error) {
+func (t *transactionUsecase) FetchTransactions(ctx context.Context, input domain.FetchTransactionInput) (*domain.FetchTransactionResult, error) {
+	// Business Safeguard: ตั้งค่า Default Limit ป้องกันการดึงข้อมูลท่วมระบบ
+	if input.Limit <= 0 {
+		input.Limit = 20 // ดึงทีละ 20 รายการเป็นค่าเริ่มต้น
+	}
+	if input.Page < 0 {
+		input.Page = 1
+	}
+
+	// ถ้าไม่ส่งเดือน/ปีมา ให้ใช้ของเดือนปัจจุบัน
+	if input.Year == 0 {
+		input.Year = timeutil.NowInBangkok().Year()
+	}
+	if input.Month == 0 {
+		input.Month = int(timeutil.NowInBangkok().Month())
+	}
 
 	// กำหนดวันเริ่มต้นของเดือน
-	startDate := time.Date(year, time.Month(month), 1, 0, 0, 0, 0, timeutil.BangKokLoc)
+	startDate := time.Date(input.Year, time.Month(input.Month), 1, 0, 0, 0, 0, timeutil.BangKokLoc)
 
 	// กำหนดวันสุดท้ายของเดือน (บวกไป 1 เดือนแล้วหักออก 1 นาโนวินาที)
 	endDate := startDate.AddDate(0, 1, 0).Add(-time.Nanosecond)
 
+	// คำนวณ Offset สำหรับ Pagination (สูตรมาตรฐานสากล)
+	offset := (input.Page - 1) * input.Limit
+
 	// ส่งข่อมูลช่วงเวลาไปให้ Repository
-	txs, err := t.txRepo.FetchByTimeRange(ctx, startDate, endDate)
+	txs, err := t.txRepo.FetchByTimeRange(ctx, domain.QueryTransactionParam{
+		StartDate: startDate,
+		EndDate:   endDate,
+		Limit:     input.Limit,
+		Offset:    offset,
+	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to fetch monthly trasaction history for %d-%02d: %w", year, month, err)
+		return nil, err
 	}
 
-	return txs, nil
+	totalItems, err := t.txRepo.CountByTimeRange(ctx, startDate, endDate)
+	if err != nil {
+		return nil, err
+	}
+
+	return &domain.FetchTransactionResult{
+		Transactions: txs,
+		TotalItems:   totalItems,
+	}, nil
 }
 
 // GetDashboardSummary implements [domain.TransactionUsecase].
@@ -198,7 +228,7 @@ func (t *transactionUsecase) GetDashboardSummary(ctx context.Context, scope stri
 	// หาข้อมูลบน Database
 	summary, err := t.txRepo.CalculateSummary(ctx, startDate, endDate, scope)
 	if err != nil {
-		return nil, fmt.Errorf("failed to calculate summary for key %s: %w", periodKey, err)
+		return nil, err
 	}
 
 	// แปลงข้อมูลที่ได้มาให้เป็น JSon String เพื่อไปเขียนลงใน Redis

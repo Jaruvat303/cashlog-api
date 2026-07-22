@@ -59,8 +59,8 @@ func InitPostgresDB(ctx context.Context, cfg *config.Config) *gorm.DB {
 	// สั่งให้ GORM ตรวจสอบและสร้างตาราง "transactions" บน Supabase อัตโนมัติ
 	logger.Ctx(ctx).Info("⏳ Running Database Auto Migration...")
 	err = db.AutoMigrate(
-		&domain.Transaction{},
 		&domain.Category{},
+		&domain.Transaction{},
 	) // ปรับให้ตรงกับชื่อ Struct ตาราง
 	if err != nil {
 		logger.Ctx(ctx).Fatal("❌ Database Migration Failed: %v", zap.Error(err))

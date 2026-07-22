@@ -109,9 +109,21 @@ func TestDashboardSummary(t *testing.T) {
 }
 
 func TestGetMonthlyHistory(t *testing.T) {
+
+	mockInput := domain.FetchTransactionInput{
+		Month: 6,
+		Year:  2026,
+		Page:  1,
+		Limit: 10,
+	}
 	mockHistory := []domain.Transaction{
 		{ID: 1, Amount: 200},
 		{ID: 2, Amount: 500},
+	}
+
+	mockUsecaseResponse := &domain.FetchTransactionResult{
+		Transactions: mockHistory,
+		TotalItems:   int64(len(mockHistory)),
 	}
 
 	tests := []struct {
@@ -123,18 +135,18 @@ func TestGetMonthlyHistory(t *testing.T) {
 	}{
 		{
 			name: "1. Success - รับค่าพารามิเตอร์ปกติ เรียกดูข้อมูลสำเร็จ",
-			url:  "/api/v1/transaction?month=6&year=2026",
+			url:  "/api/v1/transaction?month=6&year=2026&page=1&limit=10",
 			setupMock: func(uc *domain.TransactionUsecaseMock) {
-				uc.On("GetMonthlyHistory", mock.Anything, 6, 2026).Return(mockHistory, nil)
+				uc.On("FetchTransactions", mock.Anything, mockInput).Return(mockUsecaseResponse, nil)
 			},
 			expectedStatus: fiber.StatusOK,
 			expectedBody:   `"success":true`,
 		},
 		{
 			name: "2. Usecase Error - หลังบ้านพัง Handler ส่งต่อ Error ได้",
-			url:  "/api/v1/transaction?month=6&year=2026",
+			url:  "/api/v1/transaction?month=6&year=2026&page=1&limit=10",
 			setupMock: func(uc *domain.TransactionUsecaseMock) {
-				uc.On("GetMonthlyHistory", mock.Anything, 6, 2026).Return(nil, errors.New("something went wrong in usecase"))
+				uc.On("FetchTransactions", mock.Anything, mockInput).Return(nil, errors.New("something went wrong in usecase"))
 			},
 			expectedStatus: fiber.StatusInternalServerError,
 			expectedBody:   "something went wrong in usecase",
@@ -178,7 +190,7 @@ func TestGetMonthlyHistory(t *testing.T) {
 func TestUpdateTransaction(t *testing.T) {
 	fixedTime := time.Date(2026, time.June, 19, 16, 0, 0, 0, timeutil.BangKokLoc)
 
-	// ข้อมูลเข้า usecase
+	// ข้อมูลเข้า request body ที่ถูกต้อง
 	validInput := dto.UpdateTransactionInput{
 		Amount:          pkg.PTR(200.0),
 		Note:            pkg.PTR("edit amount"),
@@ -239,11 +251,24 @@ func TestUpdateTransaction(t *testing.T) {
 			paramID:     "1",
 			requestBody: validInput,
 			setupMock: func(uc *domain.TransactionUsecaseMock) {
-				uc.On("UpdateTransaction", mock.Anything, uint(1), mock.MatchedBy(func(input dto.UpdateTransactionInput) bool {
-					// แกะค่าข้างใน Pointer ออกมาเทียบกันตรง ๆ
-					return input.Amount != nil && *input.Amount == 200.0 &&
-						input.Note != nil && *input.Note == "edit amount" &&
-						input.CategoryID != nil && *input.CategoryID == 3
+				uc.On("UpdateTransaction", mock.Anything, uint(1), mock.MatchedBy(func(req domain.UpdateTransactionParam) bool {
+					// 1. เช็คค่า Pointers ทั่วไป
+					if req.Amount == nil || *req.Amount != *validInput.Amount {
+						return false
+					}
+					if req.Note == nil || *req.Note != *validInput.Note {
+						return false
+					}
+					if req.CategoryID == nil || *req.CategoryID != *validInput.CategoryID {
+						return false
+					}
+
+					// 2. เช็คเวลาโดยใช้ .Equal()
+					if !req.TransactionDate.Equal(*validInput.TransactionDate) {
+						return false
+					}
+
+					return true
 				})).Return(nil, domain.ErrInternalDB)
 			},
 			expectedStatus: fiber.StatusInternalServerError,
@@ -254,11 +279,24 @@ func TestUpdateTransaction(t *testing.T) {
 			paramID:     "1",
 			requestBody: validInput,
 			setupMock: func(uc *domain.TransactionUsecaseMock) {
-				uc.On("UpdateTransaction", mock.Anything, uint(1), mock.MatchedBy(func(input dto.UpdateTransactionInput) bool {
-					// แกะค่าข้างใน Pointer ออกมาเทียบกันตรง ๆ
-					return input.Amount != nil && *input.Amount == 200.0 &&
-						input.Note != nil && *input.Note == "edit amount" &&
-						input.CategoryID != nil && *input.CategoryID == 3
+				uc.On("UpdateTransaction", mock.Anything, uint(1), mock.MatchedBy(func(req domain.UpdateTransactionParam) bool {
+					// 1. เช็คค่า Pointers ทั่วไป
+					if req.Amount == nil || *req.Amount != *validInput.Amount {
+						return false
+					}
+					if req.Note == nil || *req.Note != *validInput.Note {
+						return false
+					}
+					if req.CategoryID == nil || *req.CategoryID != *validInput.CategoryID {
+						return false
+					}
+
+					// 2. เช็คเวลาโดยใช้ .Equal()
+					if !req.TransactionDate.Equal(*validInput.TransactionDate) {
+						return false
+					}
+
+					return true
 				})).Return(mockResult, nil)
 			},
 			expectedStatus: fiber.StatusOK,
@@ -423,7 +461,7 @@ func TestUplaodSlipAndLog(t *testing.T) {
 				uc.On("SyncTransaction", mock.Anything, mockImageByte, "slip_06.jpg").Return(tx, nil)
 			},
 			expectedStatus: fiber.StatusCreated,
-			expectedBody:   `"message":"Transaction logged successfully"`,
+			expectedBody:   `"message":"Transaction processed successfully"`,
 		},
 		{
 			name:      "4. Succes - Create Sucess Duplicate Data",
@@ -433,7 +471,7 @@ func TestUplaodSlipAndLog(t *testing.T) {
 				mockImageByte := []byte("fake-image-bytes")
 				uc.On("SyncTransaction", mock.Anything, mockImageByte, "slip_06.jpg").Return(nil, nil)
 			},
-			expectedStatus: fiber.StatusCreated,
+			expectedStatus: fiber.StatusOK,
 			expectedBody:   `"message":"Transaction processed successfully (skipped or duplicate caught early)"`,
 		},
 	}

@@ -3,30 +3,30 @@ package domain
 import (
 	"context"
 	"time"
-
-	"github.com/Jaruvat303/cashlog/internal/delivery/http/v1/dto"
 )
 
 type Transaction struct {
-	ID              uint
-	Amount          float64
-	TransactionType string
-	ReceiverName    string
-	Note            string
-	CategoryID      int64
-	LocalImageName  string
-	TransactionDate time.Time
-	CreatedAt       time.Time
-	UpdatedAt       time.Time
+	ID              uint      `gorm:"primaryKey;autoIncrement"`
+	Amount          float64   `gorm:"type:numeric(12,2);not null"`
+	TransactionType string    `gorm:"type:varchar(50);not null"` // income, expense
+	ReceiverName    string    `gorm:"type:varchar(255)"`
+	Note            string    `gorm:"type:text"`
+	CategoryID      int64     `gorm:"not null"`
+	Category        Category  `gorm:"foreignKey:CategoryID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT;"`
+	LocalImageName  string    `gorm:"type:varchar(255)"`
+	TransactionDate time.Time `gorm:"not null"`
+	CreatedAt       time.Time `gorm:"autoCreateTime;not null"`
+	UpdatedAt       time.Time `gorm:"autoUpdateTime;not null"`
 }
 
 type TransactionRepository interface {
 	Insert(ctx context.Context, tx *Transaction) error
-	FetchByTimeRange(ctx context.Context, startDate, endDate time.Time) ([]Transaction, error)
+	FetchByTimeRange(ctx context.Context, param QueryTransactionParam) ([]Transaction, error)
 	CalculateSummary(ctx context.Context, startDate, endDate time.Time, scope string) (*DashboardSummary, error)
 	Update(ctx context.Context, tx *Transaction) error
 	Delete(ctx context.Context, id uint) error
 	GetByID(ctx context.Context, id uint) (*Transaction, error)
+	CountByTimeRange(ctx context.Context, startDate, endDate time.Time) (int64, error)
 }
 
 // CacheRepository
@@ -44,8 +44,37 @@ type CacheRepository interface {
 type TransactionUsecase interface {
 	// SyncTransaction รับไฟล์ภาพสลิปในรูปแบบ byte array และชื่อไฟล์ภาพ เพื่อไปประมาลผลและบันทึกข้อมูล
 	SyncTransaction(ctx context.Context, imageBytes []byte, localImageName string) (*Transaction, error)
-	GetMonthlyHistory(ctx context.Context, month, year int) ([]Transaction, error)
+	FetchTransactions(ctx context.Context, input FetchTransactionInput) (*FetchTransactionResult, error)
 	GetDashboardSummary(ctx context.Context, scope string, month, year int) (*DashboardSummary, error)
-	UpdateTransaction(ctx context.Context, id uint, input dto.UpdateTransactionInput) (*Transaction, error)
+	UpdateTransaction(ctx context.Context, id uint, input UpdateTransactionParam) (*Transaction, error)
 	DeleteTransaction(ctx context.Context, id uint) error
+}
+
+type UpdateTransactionParam struct {
+	Amount          *float64
+	Note            *string
+	CategoryID      *int64
+	TransactionDate *time.Time
+}
+
+// พารามิเตอร์ที่ UseCase รับมาจาก Handler
+type FetchTransactionInput struct {
+	Year  int // เช่น 2026 (ถ้าเป็น 0 แปลว่าเอาปีปัจจุบัน)
+	Month int // 1-12 (ถ้าเป็น 0 แปลว่าเอาเดือนปัจจุบัน)
+	Page  int // หน้าที่ต้องการ เช่น 1
+	Limit int // จำนวนต่อหน้า เช่น 20
+}
+
+// พารามิเตอร์ที่ส่งไปให้ Repository เพื่อดึงข้อมูล
+type QueryTransactionParam struct {
+	StartDate time.Time
+	EndDate   time.Time
+	Limit     int
+	Offset    int
+}
+
+// สิ่งที่ UseCase ส่งกลับไปให้ Handler (ประกอบด้วยข้อมูล และข้อมูลสรุปจำนวน)
+type FetchTransactionResult struct {
+	Transactions []Transaction
+	TotalItems   int64
 }
