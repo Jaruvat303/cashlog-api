@@ -115,9 +115,9 @@ jobs:
 
           # สลับชื่อกุญแจในการไขความลับบน GCP ตามค่าที่แมปไว้ใน GitHub Secrets ของแต่ละฝั่ง
           secrets: |
-            DB_URL=${{ secrets.GCP_DB_SECRET_NAME }}:latest
-            REDIS_PASSWORD=${{ secrets.GCP_REDIS_SECRET_NAME }}:latest
-            GEMINI_API_KEY=${{ secrets.GCP_GEMINI_SECRET_NAME }}:latest
+            DB_URL=${{ vars.GCP_DB_SECRET_NAME }}:latest
+            REDIS_PASSWORD=${{ vars.GCP_REDIS_SECRET_NAME }}:latest
+            GEMINI_API_KEY=${{ vars.GCP_GEMINI_SECRET_NAME }}:latest
 
       # 🎯 พ่น URL ของ API ตัวจริงออกมาแสดงผลบนหน้าจอเมื่อ Deploy สำเร็จ
       - name: 'Show Production URL Output'
