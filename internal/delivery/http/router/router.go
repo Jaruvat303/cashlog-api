@@ -30,6 +30,9 @@ func SetupRoutes(app *fiber.App,
 		Title: "My API Performance Metrics",
 	}))
 
+	// Swagger API Documentation
+	app.Get("/swagger/*", swagger.HandlerDefault)
+
 	// Rate Limiting Middleware
 	generalRateLimiter := middleware.NewRateLimiter(60, 60*time.Second) // จำกัดคำขอทั่วไป 60 ครั้งต่อ 60 วินาที
 	slipRateLimiter := middleware.NewRateLimiter(10, 60*time.Second)    // จำกัดคำขอสำหรับการอัปโหลดสลิป 10 ครั้งต่อ 60 วินาที
