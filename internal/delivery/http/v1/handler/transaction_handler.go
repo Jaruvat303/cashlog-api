@@ -40,7 +40,7 @@ func NewTransactionHandler(txUsecase domain.TransactionUsecase, applogger logger
 // @Failure 499 {object} dto.ErrorResponseDTO "Client Closed Request  <br>error_code: REQUEST_CANCELED <br>message: The request was canceled by the user"
 // @Failure 500 {object} dto.ErrorResponseDTO "Internal Server Error <br>error_code: INTERNAL_SERVER_ERROR or INTERNAL_DATABASE_ERROR <br>message: Something went wrong, please try again later"
 // @Failure 504 {object} dto.ErrorResponseDTO "Gateway Timeout <br>error_code: DATABASE_TIMEOUT <br>message: The database operation timed out, please try again"
-// // @Router /transactions/upload-slip [post]
+// @Router /transactions/upload-slip [post]
 func (h *TransactionHandler) UplaodSlipAndLog(c *fiber.Ctx) error {
 	ctx := c.UserContext()
 	// อ่านค่าชื่อไฟล์ภาพต้นฉบับจาก Form Value
@@ -102,7 +102,7 @@ func (h *TransactionHandler) UplaodSlipAndLog(c *fiber.Ctx) error {
 // @Failure 499 {object} dto.ErrorResponseDTO "Client Closed Request  <br>error_code: REQUEST_CANCELED <br>message: The request was canceled by the user"
 // @Failure 500 {object} dto.ErrorResponseDTO "Internal Server Error <br>error_code: INTERNAL_SERVER_ERROR or INTERNAL_DATABASE_ERROR <br>message: Something went wrong, please try again later"
 // @Failure 504 {object} dto.ErrorResponseDTO "Gateway Timeout <br>error_code: DATABASE_TIMEOUT <br>message: The database operation timed out, please try again"
-// @Router /transactions/dashboard-summary [get]
+// @Router /transactions/summary [get]
 func (h *TransactionHandler) GetDashboardSummary(c *fiber.Ctx) error {
 	ctx := c.UserContext()
 
@@ -143,7 +143,7 @@ func (h *TransactionHandler) GetDashboardSummary(c *fiber.Ctx) error {
 // @Failure 499 {object} dto.ErrorResponseDTO "Client Closed Request  <br>error_code: REQUEST_CANCELED <br>message: The request was canceled by the user"
 // @Failure 500 {object} dto.ErrorResponseDTO "Internal Server Error <br>error_code: INTERNAL_SERVER_ERROR or INTERNAL_DATABASE_ERROR <br>message: Something went wrong, please try again later"
 // @Failure 504 {object} dto.ErrorResponseDTO "Gateway Timeout <br>error_code: DATABASE_TIMEOUT <br>message: The database operation timed out, please try again"
-// @Router /transactions/monthly-history [get]
+// @Router /transactions/ [get]
 func (h *TransactionHandler) GetMonthlyHistory(c *fiber.Ctx) error {
 	// 1. แกะค่าจาก Query Parameters (พร้อมกำหนดค่า Default เผื่อหน้าบ้านไม่ได้ส่งมา)
 	year, _ := strconv.Atoi(c.Query("year", "0"))
@@ -195,7 +195,7 @@ func (h *TransactionHandler) GetMonthlyHistory(c *fiber.Ctx) error {
 // @Failure 499 {object} dto.ErrorResponseDTO "Client Closed Request  <br>error_code: REQUEST_CANCELED <br>message: The request was canceled by the user"
 // @Failure 500 {object} dto.ErrorResponseDTO "Internal Server Error <br>error_code: INTERNAL_SERVER_ERROR or INTERNAL_DATABASE_ERROR <br>message: Something went wrong, please try again later"
 // @Failure 504 {object} dto.ErrorResponseDTO "Gateway Timeout <br>error_code: DATABASE_TIMEOUT <br>message: The database operation timed out, please try again"
-// // @Router /transactions/{id} [put]
+// @Router /transactions/{id} [patch]
 func (h *TransactionHandler) UpdateTransaction(c *fiber.Ctx) error {
 	ctx := c.UserContext()
 
@@ -239,7 +239,7 @@ func (h *TransactionHandler) UpdateTransaction(c *fiber.Ctx) error {
 // @Failure 400 {object} dto.ErrorResponseDTO "Bad Request  <br>error_code: INVALID_INPUT_PARAMETERS <br>message: 1. Invalid ID format. The path parameter 'id' must be a positive integer."
 // @Failure 500 {object} dto.ErrorResponseDTO "Internal Server Error <br>error_code: INTERNAL_SERVER_ERROR or INTERNAL_DATABASE_ERROR <br>message: Something went wrong, please try again later"
 // @Failure 504 {object} dto.ErrorResponseDTO "Gateway Timeout <br>error_code: DATABASE_TIMEOUT <br>message: The database operation timed out, please try again"
-// // @Router /transactions/{id} [delete]
+// @Router /transactions/{id} [delete]
 func (h *TransactionHandler) DeleteTransaction(c *fiber.Ctx) error {
 	ctx := c.UserContext()
 
