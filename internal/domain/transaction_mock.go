@@ -4,7 +4,6 @@ import (
 	"context"
 	"time"
 
-	"github.com/Jaruvat303/cashlog/internal/delivery/http/v1/dto"
 	"github.com/stretchr/testify/mock"
 )
 
@@ -21,12 +20,12 @@ func (m *TransactionUsecaseMock) SyncTransaction(ctx context.Context, imageBytes
 	return args.Get(0).(*Transaction), args.Error(1)
 }
 
-func (m *TransactionUsecaseMock) GetMonthlyHistory(ctx context.Context, month, year int) ([]Transaction, error) {
-	args := m.Called(ctx, month, year)
+func (m *TransactionUsecaseMock) FetchTransactions(ctx context.Context, input FetchTransactionInput) (*FetchTransactionResult, error) {
+	args := m.Called(ctx, input)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
-	return args.Get(0).([]Transaction), args.Error(1)
+	return args.Get(0).(*FetchTransactionResult), args.Error(1)
 }
 
 func (m *TransactionUsecaseMock) GetDashboardSummary(ctx context.Context, scope string, month, year int) (*DashboardSummary, error) {
@@ -37,7 +36,7 @@ func (m *TransactionUsecaseMock) GetDashboardSummary(ctx context.Context, scope 
 	return args.Get(0).(*DashboardSummary), args.Error(1)
 }
 
-func (m *TransactionUsecaseMock) UpdateTransaction(ctx context.Context, id uint, input dto.UpdateTransactionInput) (*Transaction, error) {
+func (m *TransactionUsecaseMock) UpdateTransaction(ctx context.Context, id uint, input UpdateTransactionParam) (*Transaction, error) {
 	args := m.Called(ctx, id, input)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
@@ -66,8 +65,8 @@ func (m *TransactionRepositoryMock) CheckDuplicate(ctx context.Context, txID str
 	return args.Bool(0), args.Error(1)
 }
 
-func (m *TransactionRepositoryMock) FetchByTimeRange(ctx context.Context, startDate, endDate time.Time) ([]Transaction, error) {
-	args := m.Called(ctx, startDate, endDate)
+func (m *TransactionRepositoryMock) FetchByTimeRange(ctx context.Context, param QueryTransactionParam) ([]Transaction, error) {
+	args := m.Called(ctx, param)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
@@ -99,6 +98,11 @@ func (m *TransactionRepositoryMock) GetByID(ctx context.Context, id uint) (*Tran
 		return nil, args.Error(1)
 	}
 	return args.Get(0).(*Transaction), args.Error(1)
+}
+
+func (m *TransactionRepositoryMock) CountByTimeRange(ctx context.Context, startDate, endDate time.Time) (int64, error) {
+	args := m.Called(ctx, startDate, endDate)
+	return args.Get(0).(int64), args.Error(1)
 }
 
 // TransactionCacheRepositoryMock stuct สำหรับจำลอง function ใน Redis Cache

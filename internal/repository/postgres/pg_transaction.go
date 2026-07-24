@@ -14,6 +14,20 @@ type gormTransactionRepository struct {
 	log logger.Logger
 }
 
+// CountByTimeRange implements [domain.TransactionRepository].
+func (g *gormTransactionRepository) CountByTimeRange(ctx context.Context, startDate time.Time, endDate time.Time) (int64, error) {
+	var count int64
+	err := g.db.WithContext(ctx).
+		Model(&domain.Transaction{}).
+		Where("transaction_date BETWEEN ? AND ?", startDate, endDate).
+		Count(&count).Error
+
+	if err != nil {
+		return 0, HandlerDBError(ctx, err, g.log)
+	}
+	return count, nil
+}
+
 // Delete implements [domain.TransactionRepository].
 func (g *gormTransactionRepository) Delete(ctx context.Context, id uint) error {
 	err := g.db.WithContext(ctx).Delete(&domain.Transaction{}, id).Error
@@ -26,7 +40,7 @@ func (g *gormTransactionRepository) Delete(ctx context.Context, id uint) error {
 // GetByID implements [domain.TransactionRepository].
 func (g *gormTransactionRepository) GetByID(ctx context.Context, id uint) (*domain.Transaction, error) {
 	var tx domain.Transaction
-	err := g.db.WithContext(ctx).First(&tx, id).Error
+	err := g.db.WithContext(ctx).Preload("Category").First(&tx, id).Error
 	if err != nil {
 		return nil, HandlerDBError(ctx, err, g.log)
 	}
@@ -36,6 +50,12 @@ func (g *gormTransactionRepository) GetByID(ctx context.Context, id uint) (*doma
 // update implements [domain.TransactionRepository].
 func (g *gormTransactionRepository) Update(ctx context.Context, tx *domain.Transaction) error {
 	err := g.db.WithContext(ctx).Save(tx).Error
+	if err != nil {
+		return HandlerDBError(ctx, err, g.log)
+	}
+
+	// สั่งโหลดข้อมูลใหม่ล่าสุดจาก DB พ่วง Category กลับมาส่งให้ชั้นนอก
+	err = g.db.WithContext(ctx).Preload("Category").First(tx, tx.ID).Error
 	if err != nil {
 		return HandlerDBError(ctx, err, g.log)
 	}
@@ -52,10 +72,12 @@ func (g *gormTransactionRepository) CalculateSummary(ctx context.Context, startD
 		Expense: []domain.CategoryBreakdown{},
 	}
 
+	// QueryResult เป็นโครงสร้างชั่วคราวสำหรับเก็บผลลัพธ์จาก Query
 	type QueryResult struct {
 		CategoryID      *int64
 		CategoryName    string
-		IconURL         *string
+		IconKey         *string
+		ColorHex        *string
 		TransactionType *string
 		TotalAmount     float64
 	}
@@ -64,19 +86,21 @@ func (g *gormTransactionRepository) CalculateSummary(ctx context.Context, startD
 
 	// ถ้าไม่มี Icon Url ให้ใช้ค่าเริ่มต้น
 	defaultIcon := "folder"
+	defaultColor := "#CCCCCC"
 	// Query เดียวที่ดึงข้อมูลสรุปตามหมวดหมู่ในช่วงเวลาที่กำหนด
 	err := g.db.WithContext(ctx).
 		Table("transactions").
 		Select(`
 		transactions.category_id,
-		COALESCE(categories.name, 'Uncategorized') as category_name, 
-        COALESCE(categories.icon_url, ?) as icon_url,
+		COALESCE(categories.name, 'Uncategorized') as category_name,
+        COALESCE(categories.icon_key, ?) as icon_key,
+		COALESCE(categories.color_hex, ?) as color_hex,
 		transactions.transaction_type,
 		SUM(transactions.amount)as total_amount
-		`, defaultIcon).
+		`, defaultIcon, defaultColor).
 		Joins("LEFT JOIN categories ON transactions.category_id = categories.id").
 		Where("transactions.transaction_date BETWEEN ? AND ?", startDate, endDate).
-		Group("transactions.category_id,categories.name,categories.icon_url,transactions.transaction_type").
+		Group("transactions.category_id,categories.name,categories.icon_key,categories.color_hex,transactions.transaction_type").
 		Scan(&result).Error
 
 	if err != nil {
@@ -93,7 +117,26 @@ func (g *gormTransactionRepository) CalculateSummary(ctx context.Context, startD
 		breakdown := domain.CategoryBreakdown{
 			CategoryID:   catID,
 			CategoryName: res.CategoryName,
-			IconURl:      res.IconURL,
+			IconKey:      defaultIcon,
+			ColorHex:     defaultColor,
+			TotalAmount:  res.TotalAmount,
+		}
+
+		if res.IconKey != nil {
+			breakdown.IconKey = *res.IconKey
+		}
+		if res.ColorHex != nil {
+			breakdown.ColorHex = *res.ColorHex
+		}
+
+		summary.TotalIncome += 0
+		summary.TotalExpense += 0
+
+		breakdown = domain.CategoryBreakdown{
+			CategoryID:   catID,
+			CategoryName: res.CategoryName,
+			IconKey:      breakdown.IconKey,
+			ColorHex:     breakdown.ColorHex,
 			TotalAmount:  res.TotalAmount,
 		}
 
@@ -111,23 +154,20 @@ func (g *gormTransactionRepository) CalculateSummary(ctx context.Context, startD
 }
 
 // FetchByTimeRange implements [domain.TransactionRepository].
-func (g *gormTransactionRepository) FetchByTimeRange(ctx context.Context, startDate time.Time, endDate time.Time) ([]domain.Transaction, error) {
+func (g *gormTransactionRepository) FetchByTimeRange(ctx context.Context, param domain.QueryTransactionParam) ([]domain.Transaction, error) {
 	var txs []domain.Transaction
 
-	// SQL: SELECT * FROM transactions WHERE transaction_at BETWEEN ? AND ? ORDER BY transaction_at DESC
 	err := g.db.WithContext(ctx).
 		Table("transactions").
-		Where("transaction_date BETWEEN ? AND ?", startDate, endDate).
-		Order("transaction_id DESC").
-		Find(&txs).Error
+		Preload("Category").
+		Where("transaction_date BETWEEN ? AND ?", param.StartDate, param.EndDate).
+		Order("transaction_date DESC,id DESC").Find(&txs).Error
 
 	if err != nil {
 		return nil, HandlerDBError(ctx, err, g.log)
 	}
 	return txs, nil
 }
-
-
 
 // Insert implements [domain.TransactionRepository]. บันทึกรายการลงในฐานข้อมูล
 func (g *gormTransactionRepository) Insert(ctx context.Context, tx *domain.Transaction) error {
@@ -137,6 +177,11 @@ func (g *gormTransactionRepository) Insert(ctx context.Context, tx *domain.Trans
 		return HandlerDBError(ctx, err, g.log)
 	}
 
+	// เติมเต็มข้อมูลความสัมพันธ์ (Refresh Data) ด้วยการ Preload Category กลับมาใส่ใน Pointer ตัวเดิม
+	err = g.db.WithContext(ctx).Preload("Category").First(tx, tx.ID).Error
+	if err != nil {
+		return HandlerDBError(ctx, err, g.log)
+	}
 	return nil
 }
 

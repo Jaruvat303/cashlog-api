@@ -13,9 +13,8 @@ on:
 
 # 2. ตั้งค่าตัวแปรส่วนกลาง (Global Env) สำหรับใช้งานในพาร์ท CD
 env:
-  PROJECT_ID: 'cashlog-api'               # ✏️ เปลี่ยนเป็น Project ID ของคุณบน GCP
-  REGION: 'asia-southeast1'                       # ✏️ แนะนำโซนสิงคโปร์ ใกล้และเสถียรที่สุดสำหรับไทย
-  SERVICE: 'cashlog-api'                          # ✏️ ชื่อบริการ Cloud Run ของคุณ
+  PROJECT_ID: 'cashlog-api'               # เปลี่ยนเป็น Project ID ของคุณบน GCP
+  REGION: 'asia-southeast1'               # แนะนำโซนสิงคโปร์ ใกล้และเสถียรที่สุดสำหรับไทย
   WORKLOAD_IDENTITY_PROVIDER: 'projects/501276653507/locations/global/workloadIdentityPools/github-final-pool/providers/github-final-provider' # ✏️ ใส่ค่าหลังจากตั้งค่า WIF บน GCP เสร็จ
 
 jobs:
@@ -53,8 +52,10 @@ jobs:
   continuous-deployment:
     name: 'Deploy to Google Cloud Run'
     needs: continuous-integration # 🛑 ต้องผ่านด่าน Job CI ข้างบนก่อน ถึงจะยอมให้ทำขั้นตอนนี้
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push' # 🔒 รันเฉพาะตอนโค้ดถูก merge เข้า main เท่านั้น
+    if: (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop') && github.event_name == 'push'
     runs-on: ubuntu-latest
+
+    environment: ${{ github.ref == 'refs/heads/main' && 'production' || 'development' }} # 🏷️ กำหนด Environment ของ GitHub Actions ให้ตรงกับ Branch ที่ Deploy
 
     # กำหนดสิทธิ์ให้ GitHub ออก Token ไปแลกตั๋วชั่วคราวจาก GCP
     permissions:
@@ -84,38 +85,39 @@ jobs:
 
       # 🏗️ สเต็ปสร้างกล่อง Docker และอัปโหลดขึ้น Cloud (ใช้ไฟล์ Dockerfile ที่คุณเตรียมไว้)
       - name: 'Build and Push Container Image'
+        id: build_image
         run: |
-          DOCKER_TAG="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.SERVICE }}/${{ env.SERVICE }}:${{ github.sha }}"
+          DOCKER_TAG="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ vars.SERVICE_NAME }}/${{ vars.SERVICE_NAME }}:${{ github.sha }}"
           docker build --tag "${DOCKER_TAG}" .
           docker push "${DOCKER_TAG}"
+          echo "image_tag=${DOCKER_TAG}" >> $GITHUB_OUTPUT
 
       # 🚀 สเต็ปสั่งการให้ Cloud Run สลับไปใช้ Image ตัวใหม่ล่าสุดแบบไม่มีสถิติระบบล่ม (Zero Downtime)
       - id: 'deploy'
         name: 'Deploy to Cloud Run'
         uses: 'google-github-actions/deploy-cloudrun@v2' # google-github-actions/deploy-cloudrun@v2
         with:
-          service: '${{ env.SERVICE }}'
+          service: '${{ vars.SERVICE_NAME }}'
           region: '${{ env.REGION }}'
-          image: ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.SERVICE }}/${{ env.SERVICE }}:${{ github.sha }}
+          image: '${{steps.build_image.outputs.image_tag}}'
           flags: '--allow-unauthenticated'
           env_vars: |
-            APP_ENV=production
+            APP_ENV=${{ vars.APP_ENV }}
             LOG_LEVEL=info
             DB_MAX_IDEL_CONNS=2
             DB_MAX_OPEN_CONNS=5
             DB_CONN_MAX_LIFETIME=30
-            REDIS_HOST=vital-kitten-142394.upstash.io:6379
+            REDIS_HOST=${{ vars.REDIS_HOST }}
             REDIS_USERNAME=default
             REDIS_DB=0
             GOOGLE_CLOUD_PROJECT=cashlog-api
-            MODEL_NAME=gemini-2.5-flash-lite
+            MODEL_NAME=gemini-3.5-flash-lite
 
-         # สำหรับดึงข้อมูลความลับจาก GCP Secret Manager เข้ามาผูกเป็น Env ใน App
-          # รูปแบบ: ENV_NAME=SECRET_NAME:VERSION
+          # สลับชื่อกุญแจในการไขความลับบน GCP ตามค่าที่แมปไว้ใน GitHub Secrets ของแต่ละฝั่ง
           secrets: |
-            DB_URL=CASHLOG_DB_URL:latest
-            REDIS_PASSWORD=CASHLOG_REDIS_PASSWORD:latest
-            GEMINI_API_KEY=CASHLOG_GEMINI_API_KEY:latest
+            DB_URL=${{ vars.GCP_DB_SECRET_NAME }}:latest
+            REDIS_PASSWORD=${{ vars.GCP_REDIS_SECRET_NAME }}:latest
+            GEMINI_API_KEY=${{ vars.GCP_GEMINI_SECRET_NAME }}:latest
 
       # 🎯 พ่น URL ของ API ตัวจริงออกมาแสดงผลบนหน้าจอเมื่อ Deploy สำเร็จ
       - name: 'Show Production URL Output'

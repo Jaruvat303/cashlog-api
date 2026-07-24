@@ -8,7 +8,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Jaruvat303/cashlog/internal/delivery/http/v1/dto"
 	"github.com/Jaruvat303/cashlog/internal/domain"
 	"github.com/Jaruvat303/cashlog/internal/usecase"
 	"github.com/Jaruvat303/cashlog/pkg"
@@ -18,13 +17,27 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
-func TestGetMonthlyHistory(t *testing.T) {
+func TestFetchTransactions(t *testing.T) {
 	transactionType := "expense"
 	// กำหนดวันเริ่มต้นของเดือน
 	startDate := time.Date(2026, time.Month(6), 1, 0, 0, 0, 0, timeutil.BangKokLoc)
 
 	// กำหนดวันสุดท้ายของเดือน (บวกไป 1 เดือนแล้วหักออก 1 นาโนวินาที)
 	endDate := startDate.AddDate(0, 1, 0).Add(-time.Nanosecond)
+
+	mockInput := domain.FetchTransactionInput{
+		Year:  2026,
+		Month: 6,
+		Page:  1,
+		Limit: 20,
+	}
+
+	mockQueryParam := domain.QueryTransactionParam{
+		StartDate: startDate,
+		EndDate:   endDate,
+		Limit:     20,
+		Offset:    0,
+	}
 
 	mockMonthlyHistory := []domain.Transaction{
 		{
@@ -41,33 +54,36 @@ func TestGetMonthlyHistory(t *testing.T) {
 		},
 	}
 
+	mockFetchTransactionResult := &domain.FetchTransactionResult{
+		Transactions: mockMonthlyHistory,
+		TotalItems:   int64(len(mockMonthlyHistory)),
+	}
+
 	tests := []struct {
 		name           string
-		month          int
-		year           int
+		input          domain.FetchTransactionInput
 		setupMock      func(repo *domain.TransactionRepositoryMock, cache *domain.TransactionCacheRepositoryMock)
-		expectedResult []domain.Transaction
+		expectedResult *domain.FetchTransactionResult
 		expectedError  bool
 	}{
 		{
 			name:  "1. Successfully",
-			month: 6,
-			year:  2026,
+			input: mockInput,
 			setupMock: func(repo *domain.TransactionRepositoryMock, cache *domain.TransactionCacheRepositoryMock) {
 				ctx := mock.Anything
 
-				repo.On("FetchByTimeRange", ctx, startDate, endDate).Return(mockMonthlyHistory, nil)
+				repo.On("FetchByTimeRange", ctx, mockQueryParam).Return(mockMonthlyHistory, nil)
+				repo.On("CountByTimeRange", ctx, startDate, endDate).Return(int64(len(mockMonthlyHistory)), nil)
 			},
-			expectedResult: mockMonthlyHistory,
+			expectedResult: mockFetchTransactionResult,
 			expectedError:  false,
 		},
 		{
 			name:  "2. DB Error",
-			month: 6,
-			year:  2026,
+			input: mockInput,
 			setupMock: func(repo *domain.TransactionRepositoryMock, cache *domain.TransactionCacheRepositoryMock) {
 				ctx := mock.Anything
-				repo.On("FetchByTimeRange", ctx, startDate, endDate).Return(nil, errors.New("DB Error"))
+				repo.On("FetchByTimeRange", ctx, mockQueryParam).Return(nil, errors.New("DB Error"))
 			},
 			expectedResult: nil,
 			expectedError:  true,
@@ -88,7 +104,7 @@ func TestGetMonthlyHistory(t *testing.T) {
 			txUsecase := usecase.NewTransactionUsecase(mockRepo, mockCacheRepo, mockGemini, mockLogger)
 
 			// Act
-			result, err := txUsecase.GetMonthlyHistory(ctx, tt.month, tt.year)
+			result, err := txUsecase.FetchTransactions(ctx, tt.input)
 
 			// Assert
 			if tt.expectedError {
@@ -338,7 +354,7 @@ func TestDeleteTransaction(t *testing.T) {
 func TestUpdateTransaction(t *testing.T) {
 	// 1. กำหนดเวลาคงที่ (Fixed Time) ไว้ที่ด้านบนสุด
 	fixedTime := time.Date(2026, time.June, 19, 16, 0, 0, 0, time.Local)
-	mockInput := dto.UpdateTransactionInput{
+	mockInput := domain.UpdateTransactionParam{
 		Amount:          pkg.PTR(200.0),
 		Note:            pkg.PTR("edit amount"),
 		CategoryID:      pkg.PTR(int64(3)),
@@ -362,7 +378,7 @@ func TestUpdateTransaction(t *testing.T) {
 	tests := []struct {
 		name           string
 		id             uint
-		input          dto.UpdateTransactionInput
+		input          domain.UpdateTransactionParam
 		setupMock      func(repo *domain.TransactionRepositoryMock, cache *domain.TransactionCacheRepositoryMock)
 		expectedResult *domain.Transaction
 		expectedError  bool
@@ -490,12 +506,11 @@ func TestSyncTransaction(t *testing.T) {
 				cache.On("CheckFileExists", ctx, "new_slip.jpg").Return(false, nil)
 
 				// จำลองว่า AI คินค่า Error
-				gemini.On("ExtractData", ctx, fakeBytes).Return(nil, errors.New("gemini api error"))
+				gemini.On("ExtractData", ctx, fakeBytes).Return(nil, domain.ErrGeminiUnavailable)
 
 			},
 			expectedAssert: func(t *testing.T, result *domain.Transaction, err error) {
-				assert.Error(t, err)
-				assert.Contains(t, err.Error(), "gemini api error")
+				assert.Error(t, err, domain.ErrGeminiUnavailable)
 				assert.Nil(t, result)
 			},
 		},
@@ -524,6 +539,7 @@ func TestSyncTransaction(t *testing.T) {
 					TransactionType: "expense",
 					ReceiverName:    "Gash mach",
 					LocalImageName:  "perfact_slip.jpg",
+					CategoryID:      1,
 					TransactionDate: mockTime,
 				}
 				repo.On("Insert", ctx, expectedTx).Return(nil)
@@ -566,6 +582,7 @@ func TestSyncTransaction(t *testing.T) {
 					TransactionType: "expense",
 					ReceiverName:    "Gash mach",
 					LocalImageName:  "perfect_slip.jpg",
+					CategoryID:      1,
 					TransactionDate: mockTime,
 				}
 				repo.On("Insert", ctx, expectedTx).Return(errors.New("db error"))

@@ -15,6 +15,7 @@ type DashboardSummary struct {
 type CategoryBreakdown struct {
 	CategoryID   int64   `json:"category_id"`
 	CategoryName string  `json:"category_name"`
-	IconURl      *string `json:"icon_url"`
+	IconKey      string  `json:"icon_key"`  // เก็บชื่อกลาง เช่น "utensils", "zap", "wallet"
+	ColorHex     string  `json:"color_hex"` // เก็บโค้ดสี เช่น "#EF4444"
 	TotalAmount  float64 `json:"total_amount"`
 }

@@ -3,7 +3,6 @@ package usecase
 import (
 	"context"
 
-	"github.com/Jaruvat303/cashlog/internal/delivery/http/v1/dto"
 	"github.com/Jaruvat303/cashlog/internal/domain"
 	"github.com/Jaruvat303/cashlog/pkg/logger"
 )
@@ -14,17 +13,17 @@ type categoryUsecase struct {
 }
 
 // CreateCategory implements [domain.CategoryUsecase].
-func (c *categoryUsecase) CreateCategory(ctx context.Context, input dto.CreateCategoryInput) error {
+func (c *categoryUsecase) CreateCategory(ctx context.Context, input domain.CreateCategoryParam) (*domain.Category, error) {
 	cat := &domain.Category{
-		Name:    input.Name,
-		Type:    input.Type,
+		Name: input.Name,
+		Type: input.Type,
 	}
 
 	if err := c.categoryRepo.Create(ctx, cat); err != nil {
-		return err
+		return nil, err
 	}
 
-	return nil
+	return cat, nil
 }
 
 // DeleteCategory implements [domain.CategoryUsecase].
@@ -44,22 +43,21 @@ func (c *categoryUsecase) DeleteCategory(ctx context.Context, id uint) error {
 }
 
 // FetchCategories implements [domain.CategoryUsecase].
-func (c *categoryUsecase) FetchCategoriesByType(ctx context.Context,types string) ([]domain.Category, error) {
-	return c.categoryRepo.GetByType(ctx,types)
+func (c *categoryUsecase) FetchCategoriesByType(ctx context.Context, types string) ([]domain.Category, error) {
+	return c.categoryRepo.GetByType(ctx, types)
 }
 
 // UpdateCategory implements [domain.CategoryUsecase].
-func (c *categoryUsecase) UpdateCategory(ctx context.Context, id uint, input dto.UpdateCategoryInput) (*domain.Category, error) {
+func (c *categoryUsecase) UpdateCategory(ctx context.Context, id uint, input domain.UpdateCategoryParam) (*domain.Category, error) {
 	// ค้นหาข้อมูล category ในฐานข้อมูล
 	cat, err := c.categoryRepo.GetByID(ctx, id)
 	if err != nil {
 		return nil, err
 	}
 
-	if input.Name != nil {
-		cat.Name = *input.Name
+	if input.Name != "" {
+		cat.Name = input.Name
 	}
-
 
 	// สั่ง Update category จากฐานข้อมูล
 	if err := c.categoryRepo.Update(ctx, cat, id); err != nil {
