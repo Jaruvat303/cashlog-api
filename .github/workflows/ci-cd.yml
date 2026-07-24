@@ -111,7 +111,7 @@ jobs:
             REDIS_USERNAME=default
             REDIS_DB=0
             GOOGLE_CLOUD_PROJECT=cashlog-api
-            MODEL_NAME=gemini-2.0-flash-lite
+            MODEL_NAME=gemini-3.5-flash-lite
 
           # สลับชื่อกุญแจในการไขความลับบน GCP ตามค่าที่แมปไว้ใน GitHub Secrets ของแต่ละฝั่ง
           secrets: |
