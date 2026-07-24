@@ -300,12 +300,14 @@ func (t *transactionUsecase) SyncTransaction(ctx context.Context, imageBytes []b
 
 	// บันทึก Transaction ใหม่ลงในฐานข้อมูล
 	txType := "expense"
+	categoryID := 1 // กำหนดเริ่มต้น 1 (ไม่ระบุประเภท)
 	newTx := &domain.Transaction{
 		Amount:          amount,
 		TransactionType: txType,
 		ReceiverName:    slipResult.ReceiverName,
 		LocalImageName:  localImageName,
 		TransactionDate: parsedTime,
+		CategoryID:      int64(categoryID),
 	}
 
 	if err := t.txRepo.Insert(ctx, newTx); err != nil {
