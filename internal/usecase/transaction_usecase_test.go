@@ -506,12 +506,11 @@ func TestSyncTransaction(t *testing.T) {
 				cache.On("CheckFileExists", ctx, "new_slip.jpg").Return(false, nil)
 
 				// จำลองว่า AI คินค่า Error
-				gemini.On("ExtractData", ctx, fakeBytes).Return(nil, errors.New("gemini api error"))
+				gemini.On("ExtractData", ctx, fakeBytes).Return(nil, domain.ErrGeminiUnavailable)
 
 			},
 			expectedAssert: func(t *testing.T, result *domain.Transaction, err error) {
-				assert.Error(t, err)
-				assert.Contains(t, err.Error(), "gemini api error")
+				assert.Error(t, err, domain.ErrGeminiUnavailable)
 				assert.Nil(t, result)
 			},
 		},
@@ -540,6 +539,7 @@ func TestSyncTransaction(t *testing.T) {
 					TransactionType: "expense",
 					ReceiverName:    "Gash mach",
 					LocalImageName:  "perfact_slip.jpg",
+					CategoryID:      1,
 					TransactionDate: mockTime,
 				}
 				repo.On("Insert", ctx, expectedTx).Return(nil)
@@ -582,6 +582,7 @@ func TestSyncTransaction(t *testing.T) {
 					TransactionType: "expense",
 					ReceiverName:    "Gash mach",
 					LocalImageName:  "perfect_slip.jpg",
+					CategoryID:      1,
 					TransactionDate: mockTime,
 				}
 				repo.On("Insert", ctx, expectedTx).Return(errors.New("db error"))
