@@ -29,10 +29,10 @@ type TransactionResponse struct {
 
 // UpdateTransactionInput คือ DTO สำหรับล็อกขอบเขตการแก้ไขข้อมูลจากหน้าบ้าน
 type UpdateTransactionInput struct {
-	Amount          *float64   `json:"amount" validate:"omitempty,gt=0"`
-	Note            *string    `json:"note" validate:"omitempty,max=255"`
-	CategoryID      *int64     `json:"category_id" validate:"omitempty,gt=0"`
-	TransactionDate *time.Time `json:"transaction_date" validate:"omitempty"`
+	Amount          *float64   `json:"amount" validate:"omitempty,gt=0" example:"150.50"`
+	Note            *string    `json:"note" validate:"omitempty,max=255" example:"ค่ากาแฟอเมริกาโน่เย็น"`
+	CategoryID      *int64     `json:"category_id" validate:"omitempty,gt=0" example:"2"`
+	TransactionDate *time.Time `json:"transaction_date" validate:"omitempty" example:"2026-07-24T14:30:00+07:00"`
 }
 
 // --- Mapper Functions (แปลงจาก Domain Model เข้าสู่ DTO ขาออก) ---
