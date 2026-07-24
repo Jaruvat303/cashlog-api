@@ -4,6 +4,7 @@ INSERT INTO categories (name, type, icon_key, color_hex, created_at, updated_at)
 -- ==========================================
 -- หน้าจอรายจ่าย (Expense) - 20 รายการ
 -- ==========================================
+('ไม่ระบุประเภท', 'expense', 'question-fill', '#64748B', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
 ('อาหารและเครื่องดื่ม', 'expense', 'restaurant-fill', '#EF4444', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
 ('ของทานเล่นและคาเฟ่', 'expense', 'cup-fill', '#F97316', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
 ('ค่าของชำและวัตถุดิบเข้าบ้าน', 'expense', 'shopping-bag-3-fill', '#FBBF24', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
@@ -39,8 +40,8 @@ INSERT INTO categories (name, type, icon_key, color_hex, created_at, updated_at)
 ('เครดิตเงินคืน / แคชแบ็ก', 'income', 'coins-fill', '#EAB308', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
 ('รายรับอื่น ๆ', 'income', 'money-dollar-circle-fill', '#71717A', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
 
-ON CONFLICT (name) 
-DO UPDATE SET 
+ON CONFLICT (name)
+DO UPDATE SET
     icon_key = EXCLUDED.icon_key,
     color_hex = EXCLUDED.color_hex,
     updated_at = CURRENT_TIMESTAMP; -- อัปเดตเวลาแก้ไขล่าสุดเมื่อข้อมูลซ้ำ
