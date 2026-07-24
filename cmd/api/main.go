@@ -26,7 +26,7 @@ import (
 // @contact.name API Support
 // @contact.email jaruvat.see@gmail.com
 
-// @BasePath /
+// @BasePath /api/v1
 
 func main() {
 	// Load Config
