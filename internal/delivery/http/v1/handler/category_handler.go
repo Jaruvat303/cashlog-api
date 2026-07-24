@@ -75,7 +75,7 @@ func (h *CategoryHandler) CreateCategory(c *fiber.Ctx) error {
 // @Failure 499 {object} dto.ErrorResponseDTO "Client Closed Request  <br>error_code: REQUEST_CANCELED <br>message: The request was canceled by the user"
 // @Failure 500 {object} dto.ErrorResponseDTO "Internal Server Error <br>error_code: INTERNAL_SERVER_ERROR or INTERNAL_DATABASE_ERROR <br>message: Something went wrong, please try again later"
 // @Failure 504 {object} dto.ErrorResponseDTO "Gateway Timeout <br>error_code: DATABASE_TIMEOUT <br>message: The database operation timed out, please try again"
-// @Router /categories/{id} [put]
+// @Router /categories/{id} [patch]
 func (h *CategoryHandler) UpdateCategory(c *fiber.Ctx) error {
 	ctx := c.UserContext()
 

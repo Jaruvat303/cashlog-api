@@ -136,7 +136,55 @@ const docTemplate = `{
             }
         },
         "/categories/{id}": {
-            "put": {
+            "delete": {
+                "description": "ลบ Category โดยต้องระบุ ID ของ Category ที่ต้องการลบ",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Category"
+                ],
+                "summary": "ลบ Category",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID ของ Category ที่ต้องการลบ",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "400": {
+                        "description": "Bad Request \u003cbr\u003eerror_code: INVALID_INPUT_PARAMETERS \u003cbr\u003eMessage: Invalid ID format. The path parameter 'id' must be a positive integer.",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto.ErrorResponseDTO"
+                        }
+                    },
+                    "499": {
+                        "description": "Client Closed Request  \u003cbr\u003eerror_code: REQUEST_CANCELED \u003cbr\u003emessage: The request was canceled by the user",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto.ErrorResponseDTO"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error \u003cbr\u003eerror_code: INTERNAL_SERVER_ERROR or INTERNAL_DATABASE_ERROR \u003cbr\u003emessage: Something went wrong, please try again later",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto.ErrorResponseDTO"
+                        }
+                    },
+                    "504": {
+                        "description": "Gateway Timeout \u003cbr\u003eerror_code: DATABASE_TIMEOUT \u003cbr\u003emessage: The database operation timed out, please try again",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto.ErrorResponseDTO"
+                        }
+                    }
+                }
+            },
+            "patch": {
                 "description": "อัปเดตข้อมูล Category โดยต้องระบุ ID ของ Category ที่ต้องการอัปเดต",
                 "consumes": [
                     "application/json"
@@ -198,9 +246,11 @@ const docTemplate = `{
                         }
                     }
                 }
-            },
-            "delete": {
-                "description": "ลบ Category โดยต้องระบุ ID ของ Category ที่ต้องการลบ",
+            }
+        },
+        "/transactions/": {
+            "get": {
+                "description": "ดึงข้อมูล Transaction ตามเวลาที่กำหนด โดยสามารถระบุปี เดือน และการแบ่งหน้า (Pagination) ได้ผ่าน Query Parameters",
                 "consumes": [
                     "application/json"
                 ],
@@ -208,23 +258,42 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "Category"
+                    "Transaction"
                 ],
-                "summary": "ลบ Category",
+                "summary": "ดึงข้อมูล Transaction ตามเวลาที่กำหนด",
                 "parameters": [
                     {
                         "type": "integer",
-                        "description": "ID ของ Category ที่ต้องการลบ",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
+                        "description": "ปีที่ต้องการดึงข้อมูล",
+                        "name": "year",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "เดือนที่ต้องการดึงข้อมูล (1-12)",
+                        "name": "month",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 1,
+                        "description": "หน้าที่ต้องการดึงข้อมูล",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 20,
+                        "description": "จำนวนรายการต่อหน้า",
+                        "name": "limit",
+                        "in": "query"
                     }
                 ],
                 "responses": {
-                    "400": {
-                        "description": "Bad Request \u003cbr\u003eerror_code: INVALID_INPUT_PARAMETERS \u003cbr\u003eMessage: Invalid ID format. The path parameter 'id' must be a positive integer.",
+                    "200": {
+                        "description": "ดึงข้อมูล Transaction สำเร็จ",
                         "schema": {
-                            "$ref": "#/definitions/github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto.ErrorResponseDTO"
+                            "$ref": "#/definitions/github_com_Jaruvat303_cashlog_pkg_response.PaginatedResponse-github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto_TransactionResponse"
                         }
                     },
                     "499": {
@@ -248,7 +317,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/transactions/dashboard-summary": {
+        "/transactions/summary": {
             "get": {
                 "description": "ดึงข้อมูลสรุปรายรับ-รายจ่ายประจำเดือนหรือรายปี โดยสามารถระบุช่วงเวลาได้ผ่าน Query Parameters",
                 "consumes": [
@@ -320,9 +389,72 @@ const docTemplate = `{
                 }
             }
         },
-        "/transactions/monthly-history": {
-            "get": {
-                "description": "ดึงข้อมูล Transaction ตามเวลาที่กำหนด โดยสามารถระบุปี เดือน และการแบ่งหน้า (Pagination) ได้ผ่าน Query Parameters",
+        "/transactions/upload-slip": {
+            "post": {
+                "description": "อัปโหลดสลิปและบันทึก Transaction โดยต้องแนบไฟล์สลิปและระบุชื่อไฟล์ต้นฉบับ",
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Transaction"
+                ],
+                "summary": "อัปโหลดสลิปและบันทึก Transaction",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ชื่อไฟล์ต้นฉบับของสลิป",
+                        "name": "local_image_name",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "file",
+                        "description": "ไฟล์สลิป (รูปภาพ)",
+                        "name": "image",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Transaction processed successfully",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Jaruvat303_cashlog_pkg_response.JsonResponse-github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto_CategoryResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request  \u003cbr\u003eerror_code: INVALID_INPUT_PARAMETERS \u003cbr\u003emessage: 1. Missing required form field 'local_image_name' 2. Missing required file 'image' in multipart/form-data request.",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto.ErrorResponseDTO"
+                        }
+                    },
+                    "499": {
+                        "description": "Client Closed Request  \u003cbr\u003eerror_code: REQUEST_CANCELED \u003cbr\u003emessage: The request was canceled by the user",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto.ErrorResponseDTO"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error \u003cbr\u003eerror_code: INTERNAL_SERVER_ERROR or INTERNAL_DATABASE_ERROR \u003cbr\u003emessage: Something went wrong, please try again later",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto.ErrorResponseDTO"
+                        }
+                    },
+                    "504": {
+                        "description": "Gateway Timeout \u003cbr\u003eerror_code: DATABASE_TIMEOUT \u003cbr\u003emessage: The database operation timed out, please try again",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto.ErrorResponseDTO"
+                        }
+                    }
+                }
+            }
+        },
+        "/transactions/{id}": {
+            "delete": {
+                "description": "ลบข้อมูล Transaction โดยต้องระบุ ID ของ Transaction ที่ต้องการลบ",
                 "consumes": [
                     "application/json"
                 ],
@@ -332,40 +464,84 @@ const docTemplate = `{
                 "tags": [
                     "Transaction"
                 ],
-                "summary": "ดึงข้อมูล Transaction ตามเวลาที่กำหนด",
+                "summary": "ลบข้อมูล Transaction",
                 "parameters": [
                     {
                         "type": "integer",
-                        "description": "ปีที่ต้องการดึงข้อมูล",
-                        "name": "year",
-                        "in": "query"
-                    },
-                    {
-                        "type": "integer",
-                        "description": "เดือนที่ต้องการดึงข้อมูล (1-12)",
-                        "name": "month",
-                        "in": "query"
-                    },
-                    {
-                        "type": "integer",
-                        "default": 1,
-                        "description": "หน้าที่ต้องการดึงข้อมูล",
-                        "name": "page",
-                        "in": "query"
-                    },
-                    {
-                        "type": "integer",
-                        "default": 20,
-                        "description": "จำนวนรายการต่อหน้า",
-                        "name": "limit",
-                        "in": "query"
+                        "description": "ID ของ Transaction ที่ต้องการลบ",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "ดึงข้อมูล Transaction สำเร็จ",
+                        "description": "Transaction deleted successfully",
                         "schema": {
-                            "$ref": "#/definitions/github_com_Jaruvat303_cashlog_pkg_response.PaginatedResponse-github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto_TransactionResponse"
+                            "$ref": "#/definitions/github_com_Jaruvat303_cashlog_pkg_response.JsonResponse-github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto_EmptyData"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request  \u003cbr\u003eerror_code: INVALID_INPUT_PARAMETERS \u003cbr\u003emessage: 1. Invalid ID format. The path parameter 'id' must be a positive integer.",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto.ErrorResponseDTO"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error \u003cbr\u003eerror_code: INTERNAL_SERVER_ERROR or INTERNAL_DATABASE_ERROR \u003cbr\u003emessage: Something went wrong, please try again later",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto.ErrorResponseDTO"
+                        }
+                    },
+                    "504": {
+                        "description": "Gateway Timeout \u003cbr\u003eerror_code: DATABASE_TIMEOUT \u003cbr\u003emessage: The database operation timed out, please try again",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto.ErrorResponseDTO"
+                        }
+                    }
+                }
+            },
+            "patch": {
+                "description": "แก้ไขข้อมูล Transaction โดยต้องระบุ ID ของ Transaction ที่ต้องการแก้ไข และสามารถแก้ไขข้อมูลบางส่วนได้ (Partial Update)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Transaction"
+                ],
+                "summary": "แก้ไขข้อมูล Transaction",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID ของ Transaction ที่ต้องการแก้ไข",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "ข้อมูลที่ต้องการแก้ไข (Partial Update)",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto.UpdateTransactionInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Transaction updated successfully",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Jaruvat303_cashlog_pkg_response.JsonResponse-github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto_TransactionResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request  \u003cbr\u003eerror_code: INVALID_INPUT_PARAMETERS \u003cbr\u003emessage: 1. Invalid ID format. The path parameter 'id' must be a positive integer. 2. Invalid JSON format. 3. Validation failed for the request data",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto.ErrorResponseDTO"
                         }
                     },
                     "499": {
@@ -743,7 +919,7 @@ const docTemplate = `{
 var SwaggerInfo = &swag.Spec{
 	Version:          "1.0",
 	Host:             "",
-	BasePath:         "/",
+	BasePath:         "/api/v1",
 	Schemes:          []string{},
 	Title:            "CashLog API",
 	Description:      "API บริการหลังบ้านสำหรับจัดการบันทึกรายรับรายจ่ายและวิเคราะห์สลิปด้วย Gemini AI",

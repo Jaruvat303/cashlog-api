@@ -1,4 +1,4 @@
-basePath: /
+basePath: /api/v1
 definitions:
   github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto.CategoryBreakdownDTO:
     properties:
@@ -375,7 +375,7 @@ paths:
       summary: ลบ Category
       tags:
       - Category
-    put:
+    patch:
       consumes:
       - application/json
       description: อัปเดตข้อมูล Category โดยต้องระบุ ID ของ Category ที่ต้องการอัปเดต
@@ -423,7 +423,144 @@ paths:
       summary: อัปเดต Category
       tags:
       - Category
-  /transactions/dashboard-summary:
+  /transactions/:
+    get:
+      consumes:
+      - application/json
+      description: ดึงข้อมูล Transaction ตามเวลาที่กำหนด โดยสามารถระบุปี เดือน และการแบ่งหน้า
+        (Pagination) ได้ผ่าน Query Parameters
+      parameters:
+      - description: ปีที่ต้องการดึงข้อมูล
+        in: query
+        name: year
+        type: integer
+      - description: เดือนที่ต้องการดึงข้อมูล (1-12)
+        in: query
+        name: month
+        type: integer
+      - default: 1
+        description: หน้าที่ต้องการดึงข้อมูล
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: จำนวนรายการต่อหน้า
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: ดึงข้อมูล Transaction สำเร็จ
+          schema:
+            $ref: '#/definitions/github_com_Jaruvat303_cashlog_pkg_response.PaginatedResponse-github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto_TransactionResponse'
+        "499":
+          description: 'Client Closed Request  <br>error_code: REQUEST_CANCELED <br>message:
+            The request was canceled by the user'
+          schema:
+            $ref: '#/definitions/github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto.ErrorResponseDTO'
+        "500":
+          description: 'Internal Server Error <br>error_code: INTERNAL_SERVER_ERROR
+            or INTERNAL_DATABASE_ERROR <br>message: Something went wrong, please try
+            again later'
+          schema:
+            $ref: '#/definitions/github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto.ErrorResponseDTO'
+        "504":
+          description: 'Gateway Timeout <br>error_code: DATABASE_TIMEOUT <br>message:
+            The database operation timed out, please try again'
+          schema:
+            $ref: '#/definitions/github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto.ErrorResponseDTO'
+      summary: ดึงข้อมูล Transaction ตามเวลาที่กำหนด
+      tags:
+      - Transaction
+  /transactions/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: ลบข้อมูล Transaction โดยต้องระบุ ID ของ Transaction ที่ต้องการลบ
+      parameters:
+      - description: ID ของ Transaction ที่ต้องการลบ
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Transaction deleted successfully
+          schema:
+            $ref: '#/definitions/github_com_Jaruvat303_cashlog_pkg_response.JsonResponse-github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto_EmptyData'
+        "400":
+          description: 'Bad Request  <br>error_code: INVALID_INPUT_PARAMETERS <br>message:
+            1. Invalid ID format. The path parameter ''id'' must be a positive integer.'
+          schema:
+            $ref: '#/definitions/github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto.ErrorResponseDTO'
+        "500":
+          description: 'Internal Server Error <br>error_code: INTERNAL_SERVER_ERROR
+            or INTERNAL_DATABASE_ERROR <br>message: Something went wrong, please try
+            again later'
+          schema:
+            $ref: '#/definitions/github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto.ErrorResponseDTO'
+        "504":
+          description: 'Gateway Timeout <br>error_code: DATABASE_TIMEOUT <br>message:
+            The database operation timed out, please try again'
+          schema:
+            $ref: '#/definitions/github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto.ErrorResponseDTO'
+      summary: ลบข้อมูล Transaction
+      tags:
+      - Transaction
+    patch:
+      consumes:
+      - application/json
+      description: แก้ไขข้อมูล Transaction โดยต้องระบุ ID ของ Transaction ที่ต้องการแก้ไข
+        และสามารถแก้ไขข้อมูลบางส่วนได้ (Partial Update)
+      parameters:
+      - description: ID ของ Transaction ที่ต้องการแก้ไข
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: ข้อมูลที่ต้องการแก้ไข (Partial Update)
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto.UpdateTransactionInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Transaction updated successfully
+          schema:
+            $ref: '#/definitions/github_com_Jaruvat303_cashlog_pkg_response.JsonResponse-github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto_TransactionResponse'
+        "400":
+          description: 'Bad Request  <br>error_code: INVALID_INPUT_PARAMETERS <br>message:
+            1. Invalid ID format. The path parameter ''id'' must be a positive integer.
+            2. Invalid JSON format. 3. Validation failed for the request data'
+          schema:
+            $ref: '#/definitions/github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto.ErrorResponseDTO'
+        "499":
+          description: 'Client Closed Request  <br>error_code: REQUEST_CANCELED <br>message:
+            The request was canceled by the user'
+          schema:
+            $ref: '#/definitions/github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto.ErrorResponseDTO'
+        "500":
+          description: 'Internal Server Error <br>error_code: INTERNAL_SERVER_ERROR
+            or INTERNAL_DATABASE_ERROR <br>message: Something went wrong, please try
+            again later'
+          schema:
+            $ref: '#/definitions/github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto.ErrorResponseDTO'
+        "504":
+          description: 'Gateway Timeout <br>error_code: DATABASE_TIMEOUT <br>message:
+            The database operation timed out, please try again'
+          schema:
+            $ref: '#/definitions/github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto.ErrorResponseDTO'
+      summary: แก้ไขข้อมูล Transaction
+      tags:
+      - Transaction
+  /transactions/summary:
     get:
       consumes:
       - application/json
@@ -477,38 +614,35 @@ paths:
       summary: ดึงข้อมูลสรุปรายรับ-รายจ่ายประจำเดือนหรือรายปี
       tags:
       - Transaction
-  /transactions/monthly-history:
-    get:
+  /transactions/upload-slip:
+    post:
       consumes:
-      - application/json
-      description: ดึงข้อมูล Transaction ตามเวลาที่กำหนด โดยสามารถระบุปี เดือน และการแบ่งหน้า
-        (Pagination) ได้ผ่าน Query Parameters
+      - multipart/form-data
+      description: อัปโหลดสลิปและบันทึก Transaction โดยต้องแนบไฟล์สลิปและระบุชื่อไฟล์ต้นฉบับ
       parameters:
-      - description: ปีที่ต้องการดึงข้อมูล
-        in: query
-        name: year
-        type: integer
-      - description: เดือนที่ต้องการดึงข้อมูล (1-12)
-        in: query
-        name: month
-        type: integer
-      - default: 1
-        description: หน้าที่ต้องการดึงข้อมูล
-        in: query
-        name: page
-        type: integer
-      - default: 20
-        description: จำนวนรายการต่อหน้า
-        in: query
-        name: limit
-        type: integer
+      - description: ชื่อไฟล์ต้นฉบับของสลิป
+        in: formData
+        name: local_image_name
+        required: true
+        type: string
+      - description: ไฟล์สลิป (รูปภาพ)
+        in: formData
+        name: image
+        required: true
+        type: file
       produces:
       - application/json
       responses:
-        "200":
-          description: ดึงข้อมูล Transaction สำเร็จ
+        "201":
+          description: Transaction processed successfully
           schema:
-            $ref: '#/definitions/github_com_Jaruvat303_cashlog_pkg_response.PaginatedResponse-github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto_TransactionResponse'
+            $ref: '#/definitions/github_com_Jaruvat303_cashlog_pkg_response.JsonResponse-github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto_CategoryResponse'
+        "400":
+          description: 'Bad Request  <br>error_code: INVALID_INPUT_PARAMETERS <br>message:
+            1. Missing required form field ''local_image_name'' 2. Missing required
+            file ''image'' in multipart/form-data request.'
+          schema:
+            $ref: '#/definitions/github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto.ErrorResponseDTO'
         "499":
           description: 'Client Closed Request  <br>error_code: REQUEST_CANCELED <br>message:
             The request was canceled by the user'
@@ -525,7 +659,7 @@ paths:
             The database operation timed out, please try again'
           schema:
             $ref: '#/definitions/github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto.ErrorResponseDTO'
-      summary: ดึงข้อมูล Transaction ตามเวลาที่กำหนด
+      summary: อัปโหลดสลิปและบันทึก Transaction
       tags:
       - Transaction
 swagger: "2.0"
