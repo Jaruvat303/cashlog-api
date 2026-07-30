@@ -220,7 +220,7 @@ go test ./... -v -cover
 - ✅ Build Docker image (multi-stage)
 - ✅ Deploy อัตโนมัติเมื่อผ่านทุกขั้นตอน
 
-ดู workflow ได้ที่ [`.github/workflows`](.github/workflows)
+ดู workflow ได้ที่ [`.github/workflows/ci-cd.yml`](.github/workflows)
 
 ---
 
