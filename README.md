@@ -207,7 +207,7 @@ go test ./... -v -cover
 | PATCH | `/api/v1/categories/:id` | แก้ไขหมวดหมู่ |
 | DELETE | `/api/v1/categories/:id` | ลบหมวดหมู่ |
 
-📄 API spec แบบเต็มดูได้ที่ [Swagger UI](https://YOUR-DEPLOY-URL.example.com/swagger/index.html)
+📄 API spec แบบเต็มดูได้ที่ [Swagger UI](https://cashlog-api-dev-501276653507.asia-southeast1.run.app/swagger/index.html)
 
 ---
 
