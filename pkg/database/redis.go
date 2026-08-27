@@ -12,7 +12,7 @@ import (
 )
 
 // InitRedisDB ทำหน้าที่เปิดการเชื่อมต่อ Redis และส่งกลับตัวแปร Client กลับไปใช้งาน
-func InitRedisDB(ctx context.Context, cfg *config.Config) *redis.Client {
+func InitRedisDB(ctx context.Context, cfg *config.Config, appLogger logger.Logger) *redis.Client {
 	var opt *redis.Options
 	var err error
 
@@ -45,9 +45,9 @@ func InitRedisDB(ctx context.Context, cfg *config.Config) *redis.Client {
 	if err != nil {
 		// 🚨 หากเชื่อมต่อไม่ได้บน Production เราจะไม่สั่ง Fatalf จนแอปตาย (ตามหลัก Graceful Degradation)
 		// แต่จะบันทึกเป็น WARNING เผื่อให้ระบบถอยไปใช้ฐานข้อมูลตรงๆ แทนได้
-		logger.Ctx(ctx).Warn("⚠️ Redis connection failed, application will use database fallback", zap.Error(err))
+		appLogger.Warn("⚠️ Redis connection failed, application will use database fallback", zap.Error(err))
 	} else {
-		logger.Ctx(ctx).Info("⚡ Redis database connection established cleanly via Config Struct!")
+		appLogger.Info("⚡ Redis database connection established cleanly via Config Struct!")
 	}
 
 	return rdb

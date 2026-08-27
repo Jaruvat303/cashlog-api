@@ -15,9 +15,9 @@ import (
 )
 
 // InitPostgresDB ทำหน้าที่เปิดการเชื่อมต่อฐานข้อมูลตาม Config และส่งกลับ instance ของ *gorm.DB
-func InitPostgresDB(ctx context.Context, cfg *config.Config) *gorm.DB {
+func InitPostgresDB(ctx context.Context, cfg *config.Config, appLogger logger.Logger) *gorm.DB {
 	if cfg.DBURL == "" {
-		logger.Ctx(ctx).Fatal("Configuration 'DB_URL' is required but found empty")
+		appLogger.Fatal("Configuration 'DB_URL' is required but found empty")
 	}
 
 	// ตั้งค่าการแสดง Log SQL
@@ -39,12 +39,12 @@ func InitPostgresDB(ctx context.Context, cfg *config.Config) *gorm.DB {
 		},
 	})
 	if err != nil {
-		logger.Ctx(ctx).Fatal("Failed to connect to PostgresSQL: %v", zap.Error(err))
+		appLogger.Fatal("Failed to connect to PostgresSQL: %v", zap.Error(err))
 	}
 
 	sqlDB, err := db.DB()
 	if err != nil {
-		logger.Ctx(ctx).Fatal("Failed to retrieve generic SQL instance: %v", zap.Error(err))
+		appLogger.Fatal("Failed to retrieve generic SQL instance: %v", zap.Error(err))
 	}
 
 	// ตั้งค่า Connection Pool โดยหยิบค่ามาจากสัญญลักษณ์โตรงสร้างโดยตรง
@@ -53,21 +53,21 @@ func InitPostgresDB(ctx context.Context, cfg *config.Config) *gorm.DB {
 	sqlDB.SetConnMaxLifetime(cfg.DBConnMaxLifetime)
 
 	if err := sqlDB.Ping(); err != nil {
-		logger.Ctx(ctx).Fatal("PostgresSQL ping failed: %v", zap.Error(err))
+		appLogger.Fatal("PostgresSQL ping failed: %v", zap.Error(err))
 	}
 
 	// สั่งให้ GORM ตรวจสอบและสร้างตาราง "transactions" บน Supabase อัตโนมัติ
-	logger.Ctx(ctx).Info("⏳ Running Database Auto Migration...")
+	appLogger.Info("⏳ Running Database Auto Migration...")
 	err = db.AutoMigrate(
 		&domain.Category{},
 		&domain.Transaction{},
 	) // ปรับให้ตรงกับชื่อ Struct ตาราง
 	if err != nil {
-		logger.Ctx(ctx).Fatal("❌ Database Migration Failed: %v", zap.Error(err))
+		appLogger.Fatal("❌ Database Migration Failed: %v", zap.Error(err))
 	}
 
-	logger.Ctx(ctx).Info("✅ Database Migration Completed Successfully!")
-	logger.Ctx(ctx).Info("PostgresSQL database connection established cleanly via Config Struct")
+	appLogger.Info("✅ Database Migration Completed Successfully!")
+	appLogger.Info("PostgresSQL database connection established cleanly via Config Struct")
 
 	return db
 }
@@ -76,14 +76,14 @@ func InitPostgresDB(ctx context.Context, cfg *config.Config) *gorm.DB {
 var initCategoriesSQL string
 
 // SeedCategories ทำหน้าที่อ่านไฟล์ SQL และ Execute เข้า Database
-func SeedCategories(ctx context.Context, db *gorm.DB) error {
+func SeedCategories(ctx context.Context, db *gorm.DB, appLogger logger.Logger) error {
 
 	// รันคำสั่ง SQL ผ่าน GORM
 	if err := db.Exec(initCategoriesSQL).Error; err != nil {
 		return err
 	}
 
-	logger.Ctx(ctx).Info("Successfully seeded categories data!")
+	appLogger.Info("Successfully seeded categories data!")
 	return nil
 
 }

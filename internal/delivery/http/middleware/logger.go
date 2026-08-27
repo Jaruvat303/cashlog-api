@@ -6,14 +6,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Jaruvat303/cashlog/cmd/config"
 	"github.com/Jaruvat303/cashlog/pkg/logger"
 	"github.com/Jaruvat303/cashlog/pkg/timeutil"
 	"github.com/gofiber/fiber/v2"
 	"go.uber.org/zap"
 )
 
-func NewRequestLogger(cfg *config.Config, baseLogger logger.Logger) fiber.Handler {
+func NewRequestLogger(appEnv string, gcProjectID string, baseLogger logger.Logger) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		start := timeutil.NowInBangkok()
 
@@ -34,9 +33,9 @@ func NewRequestLogger(cfg *config.Config, baseLogger logger.Logger) fiber.Handle
 
 		// สร้าง Field สำหรับผูกกับ Logger
 		var traceField zap.Field
-		if cfg.AppEnv == "production" && !strings.HasPrefix(traceID, "local-") {
+		if appEnv == "production" && !strings.HasPrefix(traceID, "local-") {
 			// ฟอร์แมตพิเศษเพื่อให้ Google Cloud Logging เชื่อมโยงเข้า Cloud Trace อัตโนมัติ
-			traceField = zap.String("logging.googleapis.com/trace", fmt.Sprintf("projects/%s/traces/%s", cfg.GCProjectID, traceID))
+			traceField = zap.String("logging.googleapis.com/trace", fmt.Sprintf("projects/%s/traces/%s", gcProjectID, traceID))
 		} else {
 			traceField = zap.String("trace_id", traceID)
 		}
