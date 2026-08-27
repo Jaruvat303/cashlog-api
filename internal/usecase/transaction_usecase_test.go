@@ -280,7 +280,7 @@ func TestDeleteTransaction(t *testing.T) {
 		ID:         1,
 		Amount:     200,
 		Note:       "",
-		CategoryID: int64(1),
+		CategoryID: pkg.PTR(int64(1)),
 	}
 
 	tests := []struct {
@@ -364,13 +364,13 @@ func TestUpdateTransaction(t *testing.T) {
 		ID:         1,
 		Amount:     0,
 		Note:       "",
-		CategoryID: int64(1),
+		CategoryID: pkg.PTR(int64(1)),
 	}
 
 	mockResult := &domain.Transaction{
 		ID:              1,
 		Amount:          200,
-		CategoryID:      3,
+		CategoryID:      pkg.PTR(int64(3)),
 		Note:            "edit amount",
 		TransactionDate: fixedTime,
 	}
@@ -404,7 +404,7 @@ func TestUpdateTransaction(t *testing.T) {
 					return tx.ID == 1 &&
 						tx.Amount == 200 &&
 						tx.Note == "edit amount" &&
-						tx.CategoryID == 3
+						tx.CategoryID != nil && *tx.CategoryID == 3
 
 				})).Return(nil)
 
@@ -539,7 +539,7 @@ func TestSyncTransaction(t *testing.T) {
 					TransactionType: "expense",
 					ReceiverName:    "Gash mach",
 					LocalImageName:  "perfact_slip.jpg",
-					CategoryID:      1,
+					Source:          domain.TransactionSourceSlip,
 					TransactionDate: mockTime,
 				}
 				repo.On("Insert", ctx, expectedTx).Return(nil)
@@ -582,7 +582,7 @@ func TestSyncTransaction(t *testing.T) {
 					TransactionType: "expense",
 					ReceiverName:    "Gash mach",
 					LocalImageName:  "perfect_slip.jpg",
-					CategoryID:      1,
+					Source:          domain.TransactionSourceSlip,
 					TransactionDate: mockTime,
 				}
 				repo.On("Insert", ctx, expectedTx).Return(errors.New("db error"))

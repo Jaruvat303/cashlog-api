@@ -202,7 +202,7 @@ func TestUpdateTransaction(t *testing.T) {
 	mockResult := &domain.Transaction{
 		ID:              1,
 		Amount:          200,
-		CategoryID:      3,
+		CategoryID:      pkg.PTR(int64(3)),
 		Note:            "edit amount",
 		TransactionDate: fixedTime,
 	}

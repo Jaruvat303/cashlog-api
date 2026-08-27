@@ -85,7 +85,7 @@ func (t *transactionUsecase) UpdateTransaction(ctx context.Context, id uint, inp
 	}
 
 	if input.CategoryID != nil {
-		tx.CategoryID = *input.CategoryID
+		tx.CategoryID = input.CategoryID
 	}
 
 	if input.TransactionDate != nil {
@@ -299,15 +299,15 @@ func (t *transactionUsecase) SyncTransaction(ctx context.Context, imageBytes []b
 	}
 
 	// บันทึก Transaction ใหม่ลงในฐานข้อมูล
-	txType := "expense"
-	categoryID := 1 // กำหนดเริ่มต้น 1 (ไม่ระบุประเภท)
+	// CategoryID ปล่อย nil เสมอสำหรับ auto-scan (Gemini ไม่มีทางรู้ category จริง) — user PATCH เอาเอง
 	newTx := &domain.Transaction{
 		Amount:          amount,
-		TransactionType: txType,
+		TransactionType: domain.TransactionTypeExpense,
 		ReceiverName:    slipResult.ReceiverName,
 		LocalImageName:  localImageName,
 		TransactionDate: parsedTime,
-		CategoryID:      int64(categoryID),
+		Source:          domain.TransactionSourceSlip,
+		CategoryID:      nil,
 	}
 
 	if err := t.txRepo.Insert(ctx, newTx); err != nil {

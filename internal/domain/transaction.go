@@ -5,14 +5,35 @@ import (
 	"time"
 )
 
+// ค่าที่เป็นไปได้ของ TransactionType
+const (
+	TransactionTypeIncome   = "income"
+	TransactionTypeExpense  = "expense"
+	TransactionTypeTransfer = "transfer"
+)
+
+// ค่าที่เป็นไปได้ของ Source (ที่มาของ transaction)
+const (
+	TransactionSourceSlip   = "slip"
+	TransactionSourceManual = "manual"
+)
+
 type Transaction struct {
-	ID              uint      `gorm:"primaryKey;autoIncrement"`
-	Amount          float64   `gorm:"type:numeric(12,2);not null"`
-	TransactionType string    `gorm:"type:varchar(50);not null"` // income, expense
-	ReceiverName    string    `gorm:"type:varchar(255)"`
-	Note            string    `gorm:"type:text"`
-	CategoryID      int64     `gorm:"not null"`
-	Category        Category  `gorm:"foreignKey:CategoryID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT;"`
+	ID              uint    `gorm:"primaryKey;autoIncrement"`
+	Amount          float64 `gorm:"type:numeric(12,2);not null"`
+	TransactionType string  `gorm:"type:varchar(50);not null"` // income, expense, transfer
+	SenderName      string  `gorm:"type:varchar(255)"`
+	ReceiverName    string  `gorm:"type:varchar(255)"`
+	Note            string  `gorm:"type:text"`
+	CategoryID      *int64
+	Category        Category `gorm:"foreignKey:CategoryID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT;"`
+	AccountID       *int64
+	Account         *Account `gorm:"foreignKey:AccountID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT;"`
+	FromAccountID   *int64
+	FromAccount     *Account `gorm:"foreignKey:FromAccountID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT;"`
+	ToAccountID     *int64
+	ToAccount       *Account  `gorm:"foreignKey:ToAccountID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT;"`
+	Source          string    `gorm:"type:varchar(20)"` // slip, manual
 	LocalImageName  string    `gorm:"type:varchar(255)"`
 	TransactionDate time.Time `gorm:"not null"`
 	CreatedAt       time.Time `gorm:"autoCreateTime;not null"`
