@@ -1,6 +1,7 @@
 package config
 
 import (
+	"encoding/json"
 	"log"
 	"os"
 	"strconv"
@@ -11,8 +12,10 @@ import (
 
 // Config โครงสร้างข้อมูลหลักที่จะเก็บค่าการตั้งค่าทั้งหมดของ Application
 type Config struct {
-	AppEnv string
-	Port   string
+	AppEnv           string
+	Port             string
+	APIKey           string
+	OwnerNameAliases []string
 
 	// Database Configs
 	DBURL             string
@@ -44,6 +47,8 @@ func LoadConfig() *Config {
 	return &Config{
 		AppEnv:            getEnv("APP_ENV", "development"),
 		Port:              getEnv("PORT", "8080"),
+		APIKey:            getEnv("API_KEY", ""), // ปล่อยว่างไว้ หากไม่มีจะไปเช็ต Error ด้านล่าง
+		OwnerNameAliases:  getEnvAsStringSlice("OWNER_NAME_ALIASES", []string{"jaruvat", "JARUVAT", "Jaruvat", "จารุุวัฒน์"}),
 		DBURL:             getEnv("DB_URL", ""), // ปล่อยว่างไว้ หากไม่มีจะไปเช็ต Error ด้านล่าง
 		DBMaxIdleConns:    getEnvAsInt("DB_MAX_IDEL_CONNS", 10),
 		DBMaxOpenConns:    getEnvAsInt("DB_MAX_OPEN_CONNS", 100),
@@ -82,4 +87,17 @@ func getEnvAsDuration(key string, defaultVal time.Duration) time.Duration {
 	}
 
 	return defaultVal
+}
+
+func getEnvAsStringSlice(key string, defaultVal []string) []string {
+	valueStr := getEnv(key, "")
+	if valueStr == "" {
+		return defaultVal
+	}
+
+	var result []string
+	if err := json.Unmarshal([]byte(valueStr), &result); err != nil {
+		return defaultVal
+	}
+	return result
 }
