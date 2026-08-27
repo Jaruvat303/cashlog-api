@@ -60,6 +60,7 @@ func InitPostgresDB(ctx context.Context, cfg *config.Config, appLogger logger.Lo
 	appLogger.Info("⏳ Running Database Auto Migration...")
 	err = db.AutoMigrate(
 		&domain.Category{},
+		&domain.Account{},
 		&domain.Transaction{},
 	) // ปรับให้ตรงกับชื่อ Struct ตาราง
 	if err != nil {
