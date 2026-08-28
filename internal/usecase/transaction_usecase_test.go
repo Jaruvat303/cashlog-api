@@ -101,7 +101,7 @@ func TestFetchTransactions(t *testing.T) {
 
 			tt.setupMock(mockRepo, mockCacheRepo)
 
-			txUsecase := usecase.NewTransactionUsecase(mockRepo, mockCacheRepo, mockGemini, nil, mockLogger)
+			txUsecase := usecase.NewTransactionUsecase(mockRepo, mockCacheRepo, mockGemini, nil, nil, mockLogger)
 
 			// Act
 			result, err := txUsecase.FetchTransactions(ctx, tt.input)
@@ -251,7 +251,7 @@ func TestGetDashboardSummary(t *testing.T) {
 
 			logger.InitLogger("development")
 			// นำ Mock ไปใส่ใน usecase
-			txUsecase := usecase.NewTransactionUsecase(mockRepo, mockCache, mockGemini, nil, mockLogger)
+			txUsecase := usecase.NewTransactionUsecase(mockRepo, mockCache, mockGemini, nil, nil, mockLogger)
 
 			// Act
 			result, err := txUsecase.GetDashboardSummary(ctx, tt.scope, tt.month, tt.year)
@@ -331,7 +331,7 @@ func TestDeleteTransaction(t *testing.T) {
 
 			ctx := context.Background()
 
-			uc := usecase.NewTransactionUsecase(mockRepo, mockCache, mockGemini, nil, mockLogger)
+			uc := usecase.NewTransactionUsecase(mockRepo, mockCache, mockGemini, nil, nil, mockLogger)
 
 			// Act
 			err := uc.DeleteTransaction(ctx, tt.id)
@@ -439,7 +439,7 @@ func TestUpdateTransaction(t *testing.T) {
 
 			tt.setupMock(mockRepo, mockCache)
 
-			uc := usecase.NewTransactionUsecase(mockRepo, mockCache, mockGemini, nil, mockLogger)
+			uc := usecase.NewTransactionUsecase(mockRepo, mockCache, mockGemini, nil, nil, mockLogger)
 
 			// Act
 			result, err := uc.UpdateTransaction(ctx, tt.id, tt.input)
@@ -472,7 +472,7 @@ func TestSyncTransaction(t *testing.T) {
 		name           string
 		imageBytes     []byte
 		localImageName string
-		setupMock      func(repo *domain.TransactionRepositoryMock, cache *domain.TransactionCacheRepositoryMock, gemini *domain.GeminiSlipRepositoryMock)
+		setupMock      func(repo *domain.TransactionRepositoryMock, cache *domain.TransactionCacheRepositoryMock, gemini *domain.GeminiSlipRepositoryMock, account *domain.AccountRepositoryMock)
 		expectedAssert func(t *testing.T, result *domain.Transaction, err error)
 	}{
 		{
@@ -483,6 +483,7 @@ func TestSyncTransaction(t *testing.T) {
 				repo *domain.TransactionRepositoryMock,
 				cache *domain.TransactionCacheRepositoryMock,
 				gemini *domain.GeminiSlipRepositoryMock,
+				account *domain.AccountRepositoryMock,
 			) {
 				// จำลองว่า CheckFileExists เจอไฟล์นี้แล้ว (true,nil)
 				cache.On("CheckFileExists", ctx, "already_done.jpg").Return(true, nil)
@@ -502,6 +503,7 @@ func TestSyncTransaction(t *testing.T) {
 				repo *domain.TransactionRepositoryMock,
 				cache *domain.TransactionCacheRepositoryMock,
 				gemini *domain.GeminiSlipRepositoryMock,
+				account *domain.AccountRepositoryMock,
 			) {
 				cache.On("CheckFileExists", ctx, "new_slip.jpg").Return(false, nil)
 
@@ -522,6 +524,7 @@ func TestSyncTransaction(t *testing.T) {
 				repo *domain.TransactionRepositoryMock,
 				cache *domain.TransactionCacheRepositoryMock,
 				gemini *domain.GeminiSlipRepositoryMock,
+				account *domain.AccountRepositoryMock,
 			) {
 				cache.On("CheckFileExists", ctx, "perfact_slip.jpg").Return(false, nil)
 
@@ -532,6 +535,9 @@ func TestSyncTransaction(t *testing.T) {
 					TransTime:    aiDate,
 				}
 				gemini.On("ExtractData", ctx, fakeBytes).Return(mockSlipData, nil)
+
+				// BR-2: ไม่มี app_name จากสลิป จึงไม่ match บัญชีใดๆ (account_id เป็น nil)
+				account.On("GetAllActive", ctx).Return([]domain.Account{}, nil)
 
 				// ตรวจสอบข้อมูลที่จะลงฐานข้อมูล
 				expectedTx := &domain.Transaction{
@@ -566,6 +572,7 @@ func TestSyncTransaction(t *testing.T) {
 				repo *domain.TransactionRepositoryMock,
 				cache *domain.TransactionCacheRepositoryMock,
 				gemini *domain.GeminiSlipRepositoryMock,
+				account *domain.AccountRepositoryMock,
 			) {
 				cache.On("CheckFileExists", ctx, "perfect_slip.jpg").Return(false, nil)
 
@@ -576,6 +583,8 @@ func TestSyncTransaction(t *testing.T) {
 					TransTime:    aiDate,
 				}
 				gemini.On("ExtractData", ctx, fakeBytes).Return(mockSlipData, nil)
+
+				account.On("GetAllActive", ctx).Return([]domain.Account{}, nil)
 
 				// ตรวจสอบข้อมูลที่จะลงฐานข้อมูล (ต้องเปลี่ยนจาก -50.00 เป็น 0.00)
 				expectedTx := &domain.Transaction{
@@ -603,11 +612,12 @@ func TestSyncTransaction(t *testing.T) {
 			mockRepo := new(domain.TransactionRepositoryMock)
 			mockCache := new(domain.TransactionCacheRepositoryMock)
 			mockGemini := new(domain.GeminiSlipRepositoryMock)
+			mockAccount := new(domain.AccountRepositoryMock)
 			mockLogger := logger.NewNopLogger()
 
-			tt.setupMock(mockRepo, mockCache, mockGemini)
+			tt.setupMock(mockRepo, mockCache, mockGemini, mockAccount)
 
-			txUsecase := usecase.NewTransactionUsecase(mockRepo, mockCache, mockGemini, nil, mockLogger)
+			txUsecase := usecase.NewTransactionUsecase(mockRepo, mockCache, mockGemini, mockAccount, nil, mockLogger)
 
 			// Act
 			result, err := txUsecase.SyncTransaction(ctx, tt.imageBytes, tt.localImageName)

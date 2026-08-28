@@ -47,3 +47,37 @@ func classifyTransactionType(senderName, receiverName string, ownerAliases []str
 		return domain.TransactionTypeExpense
 	}
 }
+
+// matchAccountByKeyword จับคู่ app_name จากสลิปกับ MatchingKeywords ของบัญชีที่ active อยู่ (BR-2)
+//
+// เทียบแบบไม่สนตัวพิมพ์เล็ก-ใหญ่ + partial match (app_name มี keyword เป็น substring)
+// ถ้ามีหลาย keyword match พร้อมกัน เลือก keyword ที่ยาว/เจาะจงที่สุด (Decision #5)
+// ไม่มี match คืนค่า nil (nullable, ปล่อยให้ user PATCH เอง ตาม Decision #18)
+func matchAccountByKeyword(appName string, activeAccounts []domain.Account) *int64 {
+	if appName == "" {
+		return nil
+	}
+
+	lowerAppName := strings.ToLower(appName)
+
+	var matchedID *int64
+	bestKeywordLen := 0
+
+	for _, acc := range activeAccounts {
+		for _, keyword := range acc.MatchingKeywords {
+			if keyword == "" {
+				continue
+			}
+			if !strings.Contains(lowerAppName, strings.ToLower(keyword)) {
+				continue
+			}
+			if len(keyword) > bestKeywordLen {
+				bestKeywordLen = len(keyword)
+				id := acc.ID
+				matchedID = &id
+			}
+		}
+	}
+
+	return matchedID
+}

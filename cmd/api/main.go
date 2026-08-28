@@ -66,7 +66,7 @@ func main() {
 	accountRepository := postgres.NewGORMAccountRepository(db, appLogger)
 
 	// Inject เลเยอร์นอกเข้าไปใน Layer Usecase
-	txUsecase := usecase.NewTransactionUsecase(txRepository, cacheRepository, geminiClient, cfg.OwnerNameAliases, appLogger)
+	txUsecase := usecase.NewTransactionUsecase(txRepository, cacheRepository, geminiClient, accountRepository, cfg.OwnerNameAliases, appLogger)
 	catUsecase := usecase.NewCategoryUsecase(categoryRepository, appLogger)
 	accUsecase := usecase.NewAccountUsecase(accountRepository, appLogger)
 

@@ -16,6 +16,7 @@ type transactionUsecase struct {
 	txRepo           domain.TransactionRepository
 	cacheRepo        domain.CacheRepository
 	geminiRepo       domain.GeminiSlipRepository
+	accountRepo      domain.AccountRepo
 	ownerNameAliases []string
 	log              logger.Logger
 }
@@ -302,6 +303,21 @@ func (t *transactionUsecase) SyncTransaction(ctx context.Context, imageBytes []b
 	// BR-1: จำแนกประเภทธุรกรรมจากชื่อผู้ส่ง/ผู้รับเทียบกับ OWNER_NAME_ALIASES
 	txType := classifyTransactionType(slipResult.SenderName, slipResult.ReceiverName, t.ownerNameAliases)
 
+	// BR-2: จับคู่บัญชีจาก app_name เทียบกับ MatchingKeywords ของบัญชีที่ active อยู่
+	activeAccounts, err := t.accountRepo.GetAllActive(ctx)
+	if err != nil {
+		return nil, err
+	}
+	matchedAccountID := matchAccountByKeyword(slipResult.AppName, activeAccounts)
+
+	var accountID, fromAccountID *int64
+	if txType == domain.TransactionTypeTransfer {
+		// Transfer: match เฉพาะ from_account_id, to_account_id ปล่อย nil เสมอ (Decision #23)
+		fromAccountID = matchedAccountID
+	} else {
+		accountID = matchedAccountID
+	}
+
 	// บันทึก Transaction ใหม่ลงในฐานข้อมูล
 	// CategoryID ปล่อย nil เสมอสำหรับ auto-scan (Gemini ไม่มีทางรู้ category จริง) — user PATCH เอาเอง
 	newTx := &domain.Transaction{
@@ -309,6 +325,8 @@ func (t *transactionUsecase) SyncTransaction(ctx context.Context, imageBytes []b
 		TransactionType: txType,
 		SenderName:      slipResult.SenderName,
 		ReceiverName:    slipResult.ReceiverName,
+		AccountID:       accountID,
+		FromAccountID:   fromAccountID,
 		LocalImageName:  localImageName,
 		TransactionDate: parsedTime,
 		Source:          domain.TransactionSourceSlip,
@@ -349,12 +367,14 @@ func (t *transactionUsecase) SyncTransaction(ctx context.Context, imageBytes []b
 func NewTransactionUsecase(txRepo domain.TransactionRepository,
 	cacheRepo domain.CacheRepository,
 	geminiRepo domain.GeminiSlipRepository,
+	accountRepo domain.AccountRepo,
 	ownerNameAliases []string,
 	log logger.Logger) domain.TransactionUsecase {
 	return &transactionUsecase{
 		txRepo:           txRepo,
 		cacheRepo:        cacheRepo,
 		geminiRepo:       geminiRepo,
+		accountRepo:      accountRepo,
 		ownerNameAliases: ownerNameAliases,
 		log:              log,
 	}
