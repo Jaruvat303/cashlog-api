@@ -1156,6 +1156,9 @@ const docTemplate = `{
                 "total_income": {
                     "type": "number"
                 },
+                "total_transfer": {
+                    "type": "number"
+                },
                 "year": {
                     "type": "integer"
                 }

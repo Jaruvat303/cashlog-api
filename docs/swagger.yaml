@@ -191,6 +191,8 @@ definitions:
         type: number
       total_income:
         type: number
+      total_transfer:
+        type: number
       year:
         type: integer
     type: object

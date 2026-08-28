@@ -129,22 +129,21 @@ func (g *gormTransactionRepository) CalculateSummary(ctx context.Context, startD
 			breakdown.ColorHex = *res.ColorHex
 		}
 
-		summary.TotalIncome += 0
-		summary.TotalExpense += 0
-
-		breakdown = domain.CategoryBreakdown{
-			CategoryID:   catID,
-			CategoryName: res.CategoryName,
-			IconKey:      breakdown.IconKey,
-			ColorHex:     breakdown.ColorHex,
-			TotalAmount:  res.TotalAmount,
+		txType := ""
+		if res.TransactionType != nil {
+			txType = *res.TransactionType
 		}
 
-		// แยกประเภทรายรับ รายจ่าย
-		if res.TransactionType != nil && *res.TransactionType == "INCOME" {
+		// แยกประเภทรายรับ/รายจ่าย/เงินโอนย้ายระหว่างบัญชี (BR-4)
+		// เดิมเทียบ "INCOME" (uppercase) แต่ค่าจริงเก็บเป็น lowercase ("income") ทำให้ทุกรายการตกไปเป็น expense หมด (bug #12)
+		switch txType {
+		case domain.TransactionTypeIncome:
 			summary.TotalIncome += res.TotalAmount
 			summary.Income = append(summary.Income, breakdown)
-		} else {
+		case domain.TransactionTypeTransfer:
+			// transfer ไม่มี category (category_id เป็น nil เสมอ) จึงไม่เก็บ breakdown แยกหมวดหมู่
+			summary.TotalTransfer += res.TotalAmount
+		default:
 			summary.TotalExpense += res.TotalAmount
 			summary.Expense = append(summary.Expense, breakdown)
 		}
