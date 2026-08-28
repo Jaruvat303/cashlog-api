@@ -79,6 +79,9 @@ type UpdateTransactionParam struct {
 	Amount          *float64
 	Note            *string
 	CategoryID      *int64
+	AccountID       *int64
+	FromAccountID   *int64
+	ToAccountID     *int64
 	TransactionDate *time.Time
 }
 

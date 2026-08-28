@@ -33,10 +33,16 @@ type TransactionResponse struct {
 }
 
 // UpdateTransactionInput คือ DTO สำหรับล็อกขอบเขตการแก้ไขข้อมูลจากหน้าบ้าน
+//
+// AccountID ใช้ได้เฉพาะธุรกรรม income/expense — สำหรับ "เติม" account_id ที่ BR-2 auto-scan match ไม่เจอ (nil)
+// FromAccountID/ToAccountID ใช้ได้เฉพาะธุรกรรม transfer — สำหรับ "เติม" to_account_id ที่ BR-2 ไม่พยายาม match ตาม Decision #23
 type UpdateTransactionInput struct {
 	Amount          *float64   `json:"amount" validate:"omitempty,gt=0" example:"150.50"`
 	Note            *string    `json:"note" validate:"omitempty,max=255" example:"ค่ากาแฟอเมริกาโน่เย็น"`
 	CategoryID      *int64     `json:"category_id" validate:"omitempty,gt=0" example:"2"`
+	AccountID       *int64     `json:"account_id" validate:"omitempty,gt=0" example:"1"`
+	FromAccountID   *int64     `json:"from_account_id" validate:"omitempty,gt=0" example:"1"`
+	ToAccountID     *int64     `json:"to_account_id" validate:"omitempty,gt=0" example:"2"`
 	TransactionDate *time.Time `json:"transaction_date" validate:"omitempty" example:"2026-07-24T14:30:00+07:00"`
 }
 
@@ -101,6 +107,18 @@ func (u *UpdateTransactionInput) ToDomainUpdateParam() domain.UpdateTransactionP
 
 	if u.CategoryID != nil {
 		param.CategoryID = u.CategoryID
+	}
+
+	if u.AccountID != nil {
+		param.AccountID = u.AccountID
+	}
+
+	if u.FromAccountID != nil {
+		param.FromAccountID = u.FromAccountID
+	}
+
+	if u.ToAccountID != nil {
+		param.ToAccountID = u.ToAccountID
 	}
 
 	if u.TransactionDate != nil {

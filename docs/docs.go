@@ -1336,6 +1336,10 @@ const docTemplate = `{
         "github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto.UpdateTransactionInput": {
             "type": "object",
             "properties": {
+                "account_id": {
+                    "type": "integer",
+                    "example": 1
+                },
                 "amount": {
                     "type": "number",
                     "example": 150.5
@@ -1344,10 +1348,18 @@ const docTemplate = `{
                     "type": "integer",
                     "example": 2
                 },
+                "from_account_id": {
+                    "type": "integer",
+                    "example": 1
+                },
                 "note": {
                     "type": "string",
                     "maxLength": 255,
                     "example": "ค่ากาแฟอเมริกาโน่เย็น"
+                },
+                "to_account_id": {
+                    "type": "integer",
+                    "example": 2
                 },
                 "transaction_date": {
                     "type": "string",

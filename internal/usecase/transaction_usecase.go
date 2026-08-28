@@ -87,7 +87,61 @@ func (t *transactionUsecase) UpdateTransaction(ctx context.Context, id uint, inp
 	}
 
 	if input.CategoryID != nil {
+		// category_id ห้ามใช้กับธุรกรรม transfer (Decision #21)
+		if tx.TransactionType == domain.TransactionTypeTransfer {
+			return nil, domain.ErrCategoryNotAllowedForTransfer
+		}
 		tx.CategoryID = input.CategoryID
+	}
+
+	if input.AccountID != nil {
+		// account_id ใช้ได้เฉพาะธุรกรรมที่ไม่ใช่ transfer (Decision #20)
+		if tx.TransactionType == domain.TransactionTypeTransfer {
+			return nil, domain.ErrInvalidInput
+		}
+		account, err := t.accountRepo.GetByID(ctx, uint(*input.AccountID))
+		if err != nil {
+			return nil, err
+		}
+		if !account.IsActive {
+			return nil, domain.ErrAccountInactive
+		}
+		tx.AccountID = input.AccountID
+	}
+
+	if input.FromAccountID != nil {
+		// from_account_id ใช้ได้เฉพาะธุรกรรม transfer เท่านั้น
+		if tx.TransactionType != domain.TransactionTypeTransfer {
+			return nil, domain.ErrInvalidInput
+		}
+		fromAccount, err := t.accountRepo.GetByID(ctx, uint(*input.FromAccountID))
+		if err != nil {
+			return nil, err
+		}
+		if !fromAccount.IsActive {
+			return nil, domain.ErrAccountInactive
+		}
+		tx.FromAccountID = input.FromAccountID
+	}
+
+	if input.ToAccountID != nil {
+		// to_account_id ใช้ได้เฉพาะธุรกรรม transfer เท่านั้น — ใช้เติมค่าที่ BR-2 ไม่พยายาม match ตอนสร้าง (Decision #23)
+		if tx.TransactionType != domain.TransactionTypeTransfer {
+			return nil, domain.ErrInvalidInput
+		}
+		toAccount, err := t.accountRepo.GetByID(ctx, uint(*input.ToAccountID))
+		if err != nil {
+			return nil, err
+		}
+		if !toAccount.IsActive {
+			return nil, domain.ErrAccountInactive
+		}
+		tx.ToAccountID = input.ToAccountID
+	}
+
+	// ตรวจสอบว่า from_account_id ไม่เท่ากับ to_account_id หลังจาก apply การแก้ไขแล้ว (Decision #4)
+	if tx.FromAccountID != nil && tx.ToAccountID != nil && *tx.FromAccountID == *tx.ToAccountID {
+		return nil, domain.ErrTransferSameAccount
 	}
 
 	if input.TransactionDate != nil {

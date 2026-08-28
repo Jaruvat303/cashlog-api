@@ -320,16 +320,25 @@ definitions:
     type: object
   github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto.UpdateTransactionInput:
     properties:
+      account_id:
+        example: 1
+        type: integer
       amount:
         example: 150.5
         type: number
       category_id:
         example: 2
         type: integer
+      from_account_id:
+        example: 1
+        type: integer
       note:
         example: ค่ากาแฟอเมริกาโน่เย็น
         maxLength: 255
         type: string
+      to_account_id:
+        example: 2
+        type: integer
       transaction_date:
         example: "2026-07-24T14:30:00+07:00"
         type: string
