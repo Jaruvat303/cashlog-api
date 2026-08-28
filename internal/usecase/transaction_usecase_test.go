@@ -101,7 +101,7 @@ func TestFetchTransactions(t *testing.T) {
 
 			tt.setupMock(mockRepo, mockCacheRepo)
 
-			txUsecase := usecase.NewTransactionUsecase(mockRepo, mockCacheRepo, mockGemini, mockLogger)
+			txUsecase := usecase.NewTransactionUsecase(mockRepo, mockCacheRepo, mockGemini, nil, mockLogger)
 
 			// Act
 			result, err := txUsecase.FetchTransactions(ctx, tt.input)
@@ -251,7 +251,7 @@ func TestGetDashboardSummary(t *testing.T) {
 
 			logger.InitLogger("development")
 			// นำ Mock ไปใส่ใน usecase
-			txUsecase := usecase.NewTransactionUsecase(mockRepo, mockCache, mockGemini, mockLogger)
+			txUsecase := usecase.NewTransactionUsecase(mockRepo, mockCache, mockGemini, nil, mockLogger)
 
 			// Act
 			result, err := txUsecase.GetDashboardSummary(ctx, tt.scope, tt.month, tt.year)
@@ -331,7 +331,7 @@ func TestDeleteTransaction(t *testing.T) {
 
 			ctx := context.Background()
 
-			uc := usecase.NewTransactionUsecase(mockRepo, mockCache, mockGemini, mockLogger)
+			uc := usecase.NewTransactionUsecase(mockRepo, mockCache, mockGemini, nil, mockLogger)
 
 			// Act
 			err := uc.DeleteTransaction(ctx, tt.id)
@@ -439,7 +439,7 @@ func TestUpdateTransaction(t *testing.T) {
 
 			tt.setupMock(mockRepo, mockCache)
 
-			uc := usecase.NewTransactionUsecase(mockRepo, mockCache, mockGemini, mockLogger)
+			uc := usecase.NewTransactionUsecase(mockRepo, mockCache, mockGemini, nil, mockLogger)
 
 			// Act
 			result, err := uc.UpdateTransaction(ctx, tt.id, tt.input)
@@ -537,6 +537,7 @@ func TestSyncTransaction(t *testing.T) {
 				expectedTx := &domain.Transaction{
 					Amount:          200,
 					TransactionType: "expense",
+					SenderName:      "ja",
 					ReceiverName:    "Gash mach",
 					LocalImageName:  "perfact_slip.jpg",
 					Source:          domain.TransactionSourceSlip,
@@ -580,6 +581,7 @@ func TestSyncTransaction(t *testing.T) {
 				expectedTx := &domain.Transaction{
 					Amount:          200,
 					TransactionType: "expense",
+					SenderName:      "ja",
 					ReceiverName:    "Gash mach",
 					LocalImageName:  "perfect_slip.jpg",
 					Source:          domain.TransactionSourceSlip,
@@ -605,7 +607,7 @@ func TestSyncTransaction(t *testing.T) {
 
 			tt.setupMock(mockRepo, mockCache, mockGemini)
 
-			txUsecase := usecase.NewTransactionUsecase(mockRepo, mockCache, mockGemini, mockLogger)
+			txUsecase := usecase.NewTransactionUsecase(mockRepo, mockCache, mockGemini, nil, mockLogger)
 
 			// Act
 			result, err := txUsecase.SyncTransaction(ctx, tt.imageBytes, tt.localImageName)

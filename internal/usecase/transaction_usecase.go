@@ -13,10 +13,11 @@ import (
 )
 
 type transactionUsecase struct {
-	txRepo     domain.TransactionRepository
-	cacheRepo  domain.CacheRepository
-	geminiRepo domain.GeminiSlipRepository
-	log        logger.Logger
+	txRepo           domain.TransactionRepository
+	cacheRepo        domain.CacheRepository
+	geminiRepo       domain.GeminiSlipRepository
+	ownerNameAliases []string
+	log              logger.Logger
 }
 
 // Delete implements [domain.TransactionUsecase].
@@ -298,11 +299,15 @@ func (t *transactionUsecase) SyncTransaction(ctx context.Context, imageBytes []b
 		parsedTime = timeutil.NowInBangkok()
 	}
 
+	// BR-1: จำแนกประเภทธุรกรรมจากชื่อผู้ส่ง/ผู้รับเทียบกับ OWNER_NAME_ALIASES
+	txType := classifyTransactionType(slipResult.SenderName, slipResult.ReceiverName, t.ownerNameAliases)
+
 	// บันทึก Transaction ใหม่ลงในฐานข้อมูล
 	// CategoryID ปล่อย nil เสมอสำหรับ auto-scan (Gemini ไม่มีทางรู้ category จริง) — user PATCH เอาเอง
 	newTx := &domain.Transaction{
 		Amount:          amount,
-		TransactionType: domain.TransactionTypeExpense,
+		TransactionType: txType,
+		SenderName:      slipResult.SenderName,
 		ReceiverName:    slipResult.ReceiverName,
 		LocalImageName:  localImageName,
 		TransactionDate: parsedTime,
@@ -344,11 +349,13 @@ func (t *transactionUsecase) SyncTransaction(ctx context.Context, imageBytes []b
 func NewTransactionUsecase(txRepo domain.TransactionRepository,
 	cacheRepo domain.CacheRepository,
 	geminiRepo domain.GeminiSlipRepository,
+	ownerNameAliases []string,
 	log logger.Logger) domain.TransactionUsecase {
 	return &transactionUsecase{
-		txRepo:     txRepo,
-		cacheRepo:  cacheRepo,
-		geminiRepo: geminiRepo,
-		log:        log,
+		txRepo:           txRepo,
+		cacheRepo:        cacheRepo,
+		geminiRepo:       geminiRepo,
+		ownerNameAliases: ownerNameAliases,
+		log:              log,
 	}
 }
