@@ -118,6 +118,61 @@ definitions:
     - name
     - type
     type: object
+  github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto.CreateTransactionInput:
+    properties:
+      account_id:
+        example: 1
+        type: integer
+      amount:
+        example: 150.5
+        type: number
+      category_id:
+        example: 2
+        type: integer
+      note:
+        example: ค่ากาแฟอเมริกาโน่เย็น
+        maxLength: 255
+        type: string
+      transaction_date:
+        example: "2026-07-24T14:30:00+07:00"
+        type: string
+      transaction_type:
+        enum:
+        - income
+        - expense
+        example: expense
+        type: string
+    required:
+    - account_id
+    - amount
+    - transaction_type
+    type: object
+  github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto.CreateTransferInput:
+    properties:
+      amount:
+        example: 150.5
+        type: number
+      category_id:
+        example: 2
+        type: integer
+      from_account_id:
+        example: 1
+        type: integer
+      note:
+        example: โอนเงินไปบัญชีออมทรัพย์
+        maxLength: 255
+        type: string
+      to_account_id:
+        example: 2
+        type: integer
+      transaction_date:
+        example: "2026-07-24T14:30:00+07:00"
+        type: string
+    required:
+    - amount
+    - from_account_id
+    - to_account_id
+    type: object
   github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto.DashboardSummaryResponse:
     properties:
       expense:
@@ -727,6 +782,50 @@ paths:
       summary: อัปเดต Category
       tags:
       - Category
+  /transactions:
+    post:
+      consumes:
+      - application/json
+      description: สร้างธุรกรรม income หรือ expense ด้วยตนเอง โดยต้องระบุ account_id
+        ที่ active อยู่
+      parameters:
+      - description: ข้อมูลสำหรับสร้างธุรกรรม
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto.CreateTransactionInput'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Transaction created successfully
+          schema:
+            $ref: '#/definitions/github_com_Jaruvat303_cashlog_pkg_response.JsonResponse-github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto_TransactionResponse'
+        "400":
+          description: 'Bad Request  <br>error_code: INVALID_INPUT_PARAMETERS <br>message:
+            1. Invalid JSON format. 2. Validation failed for the request data.'
+          schema:
+            $ref: '#/definitions/github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto.ErrorResponseDTO'
+        "499":
+          description: 'Client Closed Request  <br>error_code: REQUEST_CANCELED <br>message:
+            The request was canceled by the user'
+          schema:
+            $ref: '#/definitions/github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto.ErrorResponseDTO'
+        "500":
+          description: 'Internal Server Error <br>error_code: INTERNAL_SERVER_ERROR
+            or INTERNAL_DATABASE_ERROR <br>message: Something went wrong, please try
+            again later'
+          schema:
+            $ref: '#/definitions/github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto.ErrorResponseDTO'
+        "504":
+          description: 'Gateway Timeout <br>error_code: DATABASE_TIMEOUT <br>message:
+            The database operation timed out, please try again'
+          schema:
+            $ref: '#/definitions/github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto.ErrorResponseDTO'
+      summary: สร้างธุรกรรม income/expense แบบ manual
+      tags:
+      - Transaction
   /transactions/:
     get:
       consumes:
@@ -916,6 +1015,51 @@ paths:
           schema:
             $ref: '#/definitions/github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto.ErrorResponseDTO'
       summary: ดึงข้อมูลสรุปรายรับ-รายจ่ายประจำเดือนหรือรายปี
+      tags:
+      - Transaction
+  /transactions/transfer:
+    post:
+      consumes:
+      - application/json
+      description: สร้างธุรกรรม transfer ระหว่าง 2 บัญชีด้วยตนเอง โดย from_account_id
+        ต้องไม่เท่ากับ to_account_id และทั้งคู่ต้อง active อยู่
+      parameters:
+      - description: ข้อมูลสำหรับสร้างธุรกรรม transfer
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto.CreateTransferInput'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Transfer created successfully
+          schema:
+            $ref: '#/definitions/github_com_Jaruvat303_cashlog_pkg_response.JsonResponse-github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto_TransactionResponse'
+        "400":
+          description: 'Bad Request  <br>error_code: INVALID_INPUT_PARAMETERS <br>message:
+            1. Invalid JSON format. 2. Validation failed for the request data. 3.
+            from_account_id เท่ากับ to_account_id. 4. category_id ถูกส่งมาสำหรับ transfer'
+          schema:
+            $ref: '#/definitions/github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto.ErrorResponseDTO'
+        "499":
+          description: 'Client Closed Request  <br>error_code: REQUEST_CANCELED <br>message:
+            The request was canceled by the user'
+          schema:
+            $ref: '#/definitions/github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto.ErrorResponseDTO'
+        "500":
+          description: 'Internal Server Error <br>error_code: INTERNAL_SERVER_ERROR
+            or INTERNAL_DATABASE_ERROR <br>message: Something went wrong, please try
+            again later'
+          schema:
+            $ref: '#/definitions/github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto.ErrorResponseDTO'
+        "504":
+          description: 'Gateway Timeout <br>error_code: DATABASE_TIMEOUT <br>message:
+            The database operation timed out, please try again'
+          schema:
+            $ref: '#/definitions/github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto.ErrorResponseDTO'
+      summary: สร้างธุรกรรม transfer แบบ manual
       tags:
       - Transaction
   /transactions/upload-slip:

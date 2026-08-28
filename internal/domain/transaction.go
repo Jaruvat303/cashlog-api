@@ -65,6 +65,10 @@ type CacheRepository interface {
 type TransactionUsecase interface {
 	// SyncTransaction รับไฟล์ภาพสลิปในรูปแบบ byte array และชื่อไฟล์ภาพ เพื่อไปประมาลผลและบันทึกข้อมูล
 	SyncTransaction(ctx context.Context, imageBytes []byte, localImageName string) (*Transaction, error)
+	// CreateTransaction สร้างธุรกรรม income/expense แบบ manual (ไม่ผ่านสลิป)
+	CreateTransaction(ctx context.Context, input CreateTransactionParam) (*Transaction, error)
+	// CreateTransfer สร้างธุรกรรม transfer แบบ manual ระหว่าง 2 บัญชี
+	CreateTransfer(ctx context.Context, input CreateTransferParam) (*Transaction, error)
 	FetchTransactions(ctx context.Context, input FetchTransactionInput) (*FetchTransactionResult, error)
 	GetDashboardSummary(ctx context.Context, scope string, month, year int) (*DashboardSummary, error)
 	UpdateTransaction(ctx context.Context, id uint, input UpdateTransactionParam) (*Transaction, error)
@@ -75,6 +79,27 @@ type UpdateTransactionParam struct {
 	Amount          *float64
 	Note            *string
 	CategoryID      *int64
+	TransactionDate *time.Time
+}
+
+// CreateTransactionParam พารามิเตอร์สำหรับสร้างธุรกรรม income/expense แบบ manual
+type CreateTransactionParam struct {
+	Amount          float64
+	TransactionType string // income, expense
+	AccountID       int64
+	CategoryID      *int64
+	Note            string
+	TransactionDate *time.Time // nil แปลว่าใช้เวลาปัจจุบัน
+}
+
+// CreateTransferParam พารามิเตอร์สำหรับสร้างธุรกรรม transfer แบบ manual
+// CategoryID เก็บไว้เพื่อเช็คและ reject ถ้า client ส่งมา (Decision #21) — ไม่ถูกใช้บันทึกจริง
+type CreateTransferParam struct {
+	Amount          float64
+	FromAccountID   int64
+	ToAccountID     int64
+	CategoryID      *int64
+	Note            string
 	TransactionDate *time.Time
 }
 

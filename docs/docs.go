@@ -458,6 +458,64 @@ const docTemplate = `{
                 }
             }
         },
+        "/transactions": {
+            "post": {
+                "description": "สร้างธุรกรรม income หรือ expense ด้วยตนเอง โดยต้องระบุ account_id ที่ active อยู่",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Transaction"
+                ],
+                "summary": "สร้างธุรกรรม income/expense แบบ manual",
+                "parameters": [
+                    {
+                        "description": "ข้อมูลสำหรับสร้างธุรกรรม",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto.CreateTransactionInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Transaction created successfully",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Jaruvat303_cashlog_pkg_response.JsonResponse-github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto_TransactionResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request  \u003cbr\u003eerror_code: INVALID_INPUT_PARAMETERS \u003cbr\u003emessage: 1. Invalid JSON format. 2. Validation failed for the request data.",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto.ErrorResponseDTO"
+                        }
+                    },
+                    "499": {
+                        "description": "Client Closed Request  \u003cbr\u003eerror_code: REQUEST_CANCELED \u003cbr\u003emessage: The request was canceled by the user",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto.ErrorResponseDTO"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error \u003cbr\u003eerror_code: INTERNAL_SERVER_ERROR or INTERNAL_DATABASE_ERROR \u003cbr\u003emessage: Something went wrong, please try again later",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto.ErrorResponseDTO"
+                        }
+                    },
+                    "504": {
+                        "description": "Gateway Timeout \u003cbr\u003eerror_code: DATABASE_TIMEOUT \u003cbr\u003emessage: The database operation timed out, please try again",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto.ErrorResponseDTO"
+                        }
+                    }
+                }
+            }
+        },
         "/transactions/": {
             "get": {
                 "description": "ดึงข้อมูล Transaction ตามเวลาที่กำหนด โดยสามารถระบุปี เดือน และการแบ่งหน้า (Pagination) ได้ผ่าน Query Parameters",
@@ -574,6 +632,64 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "Bad Request  \u003cbr\u003eerror_code: INVALID_INPUT_PARAMETERS \u003cbr\u003emessage: Invalid query parameter 'scope'. Allowed values are 'monthly' or 'yearly'.",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto.ErrorResponseDTO"
+                        }
+                    },
+                    "499": {
+                        "description": "Client Closed Request  \u003cbr\u003eerror_code: REQUEST_CANCELED \u003cbr\u003emessage: The request was canceled by the user",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto.ErrorResponseDTO"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error \u003cbr\u003eerror_code: INTERNAL_SERVER_ERROR or INTERNAL_DATABASE_ERROR \u003cbr\u003emessage: Something went wrong, please try again later",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto.ErrorResponseDTO"
+                        }
+                    },
+                    "504": {
+                        "description": "Gateway Timeout \u003cbr\u003eerror_code: DATABASE_TIMEOUT \u003cbr\u003emessage: The database operation timed out, please try again",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto.ErrorResponseDTO"
+                        }
+                    }
+                }
+            }
+        },
+        "/transactions/transfer": {
+            "post": {
+                "description": "สร้างธุรกรรม transfer ระหว่าง 2 บัญชีด้วยตนเอง โดย from_account_id ต้องไม่เท่ากับ to_account_id และทั้งคู่ต้อง active อยู่",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Transaction"
+                ],
+                "summary": "สร้างธุรกรรม transfer แบบ manual",
+                "parameters": [
+                    {
+                        "description": "ข้อมูลสำหรับสร้างธุรกรรม transfer",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto.CreateTransferInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Transfer created successfully",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Jaruvat303_cashlog_pkg_response.JsonResponse-github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto_TransactionResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request  \u003cbr\u003eerror_code: INVALID_INPUT_PARAMETERS \u003cbr\u003emessage: 1. Invalid JSON format. 2. Validation failed for the request data. 3. from_account_id เท่ากับ to_account_id. 4. category_id ถูกส่งมาสำหรับ transfer",
                         "schema": {
                             "$ref": "#/definitions/github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto.ErrorResponseDTO"
                         }
@@ -936,6 +1052,80 @@ const docTemplate = `{
                         "expense"
                     ],
                     "example": "expense"
+                }
+            }
+        },
+        "github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto.CreateTransactionInput": {
+            "type": "object",
+            "required": [
+                "account_id",
+                "amount",
+                "transaction_type"
+            ],
+            "properties": {
+                "account_id": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "amount": {
+                    "type": "number",
+                    "example": 150.5
+                },
+                "category_id": {
+                    "type": "integer",
+                    "example": 2
+                },
+                "note": {
+                    "type": "string",
+                    "maxLength": 255,
+                    "example": "ค่ากาแฟอเมริกาโน่เย็น"
+                },
+                "transaction_date": {
+                    "type": "string",
+                    "example": "2026-07-24T14:30:00+07:00"
+                },
+                "transaction_type": {
+                    "type": "string",
+                    "enum": [
+                        "income",
+                        "expense"
+                    ],
+                    "example": "expense"
+                }
+            }
+        },
+        "github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto.CreateTransferInput": {
+            "type": "object",
+            "required": [
+                "amount",
+                "from_account_id",
+                "to_account_id"
+            ],
+            "properties": {
+                "amount": {
+                    "type": "number",
+                    "example": 150.5
+                },
+                "category_id": {
+                    "type": "integer",
+                    "example": 2
+                },
+                "from_account_id": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "note": {
+                    "type": "string",
+                    "maxLength": 255,
+                    "example": "โอนเงินไปบัญชีออมทรัพย์"
+                },
+                "to_account_id": {
+                    "type": "integer",
+                    "example": 2
+                },
+                "transaction_date": {
+                    "type": "string",
+                    "example": "2026-07-24T14:30:00+07:00"
                 }
             }
         },

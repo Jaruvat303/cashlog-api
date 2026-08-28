@@ -257,6 +257,128 @@ func (t *transactionUsecase) GetDashboardSummary(ctx context.Context, scope stri
 	return summary, nil
 }
 
+// invalidateSummaryCache ทุบแคช dashboard summary ของเดือนและปีที่ระบุ
+func (t *transactionUsecase) invalidateSummaryCache(ctx context.Context, log logger.Logger, txDate time.Time) {
+	periodKey := fmt.Sprintf("summary:monthly:%d-%02d", txDate.Year(), txDate.Month())
+	if err := t.cacheRepo.InvalidateCache(ctx, periodKey); err != nil {
+		log.Warn("failed to delete cache from redis ",
+			zap.Error(err),
+			zap.String("cache_key", periodKey),
+		)
+	}
+
+	yearPeriodKey := fmt.Sprintf("summary:yearly:%d", txDate.Year())
+	if err := t.cacheRepo.InvalidateCache(ctx, yearPeriodKey); err != nil {
+		log.Warn("failed to delete cache from redis ",
+			zap.Error(err),
+			zap.String("cache_key", yearPeriodKey),
+		)
+	}
+}
+
+// CreateTransaction implements [domain.TransactionUsecase].
+func (t *transactionUsecase) CreateTransaction(ctx context.Context, input domain.CreateTransactionParam) (*domain.Transaction, error) {
+	log := logger.Ctx(ctx)
+	if log == nil {
+		log = t.log
+	}
+
+	// ตรวจสอบว่า account มีอยู่จริงและ active อยู่ (Decision #6, #17)
+	account, err := t.accountRepo.GetByID(ctx, uint(input.AccountID))
+	if err != nil {
+		return nil, err
+	}
+	if !account.IsActive {
+		return nil, domain.ErrAccountInactive
+	}
+
+	txDate := timeutil.NowInBangkok()
+	if input.TransactionDate != nil {
+		txDate = *input.TransactionDate
+	}
+
+	accountID := input.AccountID
+	newTx := &domain.Transaction{
+		Amount:          input.Amount,
+		TransactionType: input.TransactionType,
+		Note:            input.Note,
+		CategoryID:      input.CategoryID,
+		AccountID:       &accountID,
+		Source:          domain.TransactionSourceManual,
+		TransactionDate: txDate,
+	}
+
+	if err := t.txRepo.Insert(ctx, newTx); err != nil {
+		return nil, fmt.Errorf("failed to save trasaction to database: %w", err)
+	}
+
+	t.invalidateSummaryCache(ctx, log, newTx.TransactionDate)
+
+	return newTx, nil
+}
+
+// CreateTransfer implements [domain.TransactionUsecase].
+func (t *transactionUsecase) CreateTransfer(ctx context.Context, input domain.CreateTransferParam) (*domain.Transaction, error) {
+	log := logger.Ctx(ctx)
+	if log == nil {
+		log = t.log
+	}
+
+	// category_id ต้องไม่ถูกส่งมาตอนสร้าง transfer (Decision #21)
+	if input.CategoryID != nil {
+		return nil, domain.ErrCategoryNotAllowedForTransfer
+	}
+
+	// from_account_id ต้องไม่เท่ากับ to_account_id (Decision #4)
+	if input.FromAccountID == input.ToAccountID {
+		return nil, domain.ErrTransferSameAccount
+	}
+
+	// ตรวจสอบว่าทั้งสองบัญชีมีอยู่จริงและ active อยู่ (Decision #22)
+	fromAccount, err := t.accountRepo.GetByID(ctx, uint(input.FromAccountID))
+	if err != nil {
+		return nil, err
+	}
+	if !fromAccount.IsActive {
+		return nil, domain.ErrAccountInactive
+	}
+
+	toAccount, err := t.accountRepo.GetByID(ctx, uint(input.ToAccountID))
+	if err != nil {
+		return nil, err
+	}
+	if !toAccount.IsActive {
+		return nil, domain.ErrAccountInactive
+	}
+
+	txDate := timeutil.NowInBangkok()
+	if input.TransactionDate != nil {
+		txDate = *input.TransactionDate
+	}
+
+	fromAccountID := input.FromAccountID
+	toAccountID := input.ToAccountID
+	newTx := &domain.Transaction{
+		Amount:          input.Amount,
+		TransactionType: domain.TransactionTypeTransfer,
+		Note:            input.Note,
+		AccountID:       nil, // บังคับ nil เสมอสำหรับ transfer (Decision #20)
+		FromAccountID:   &fromAccountID,
+		ToAccountID:     &toAccountID,
+		CategoryID:      nil,
+		Source:          domain.TransactionSourceManual,
+		TransactionDate: txDate,
+	}
+
+	if err := t.txRepo.Insert(ctx, newTx); err != nil {
+		return nil, fmt.Errorf("failed to save trasaction to database: %w", err)
+	}
+
+	t.invalidateSummaryCache(ctx, log, newTx.TransactionDate)
+
+	return newTx, nil
+}
+
 // SyncTransaction implements [domain.TransactionUsecase].
 func (t *transactionUsecase) SyncTransaction(ctx context.Context, imageBytes []byte, localImageName string) (*domain.Transaction, error) {
 	log := logger.Ctx(ctx)

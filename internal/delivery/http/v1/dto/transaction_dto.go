@@ -40,6 +40,51 @@ type UpdateTransactionInput struct {
 	TransactionDate *time.Time `json:"transaction_date" validate:"omitempty" example:"2026-07-24T14:30:00+07:00"`
 }
 
+// CreateTransactionInput คือ DTO สำหรับสร้างธุรกรรม income/expense แบบ manual (ไม่ผ่านสลิป)
+type CreateTransactionInput struct {
+	Amount          float64    `json:"amount" validate:"required,gt=0" example:"150.50"`
+	TransactionType string     `json:"transaction_type" validate:"required,oneof=income expense" example:"expense"`
+	AccountID       int64      `json:"account_id" validate:"required,gt=0" example:"1"`
+	CategoryID      *int64     `json:"category_id" validate:"omitempty,gt=0" example:"2"`
+	Note            string     `json:"note" validate:"omitempty,max=255" example:"ค่ากาแฟอเมริกาโน่เย็น"`
+	TransactionDate *time.Time `json:"transaction_date" validate:"omitempty" example:"2026-07-24T14:30:00+07:00"`
+}
+
+// CreateTransferInput คือ DTO สำหรับสร้างธุรกรรม transfer แบบ manual ระหว่าง 2 บัญชี
+// CategoryID มีไว้เพื่อรับค่าจาก client ที่อาจส่งมาแบบผิดสัญญา แล้วถูก reject ที่ usecase layer (Decision #21) — ไม่มีไว้ให้ใช้จริง
+type CreateTransferInput struct {
+	Amount          float64    `json:"amount" validate:"required,gt=0" example:"150.50"`
+	FromAccountID   int64      `json:"from_account_id" validate:"required,gt=0" example:"1"`
+	ToAccountID     int64      `json:"to_account_id" validate:"required,gt=0" example:"2"`
+	CategoryID      *int64     `json:"category_id" validate:"omitempty,gt=0" example:"2"`
+	Note            string     `json:"note" validate:"omitempty,max=255" example:"โอนเงินไปบัญชีออมทรัพย์"`
+	TransactionDate *time.Time `json:"transaction_date" validate:"omitempty" example:"2026-07-24T14:30:00+07:00"`
+}
+
+// ToDomainCreateParam แปลงข้อมูลจาก DTO เป็น Domain Param
+func (c *CreateTransactionInput) ToDomainCreateParam() domain.CreateTransactionParam {
+	return domain.CreateTransactionParam{
+		Amount:          c.Amount,
+		TransactionType: c.TransactionType,
+		AccountID:       c.AccountID,
+		CategoryID:      c.CategoryID,
+		Note:            c.Note,
+		TransactionDate: c.TransactionDate,
+	}
+}
+
+// ToDomainCreateParam แปลงข้อมูลจาก DTO เป็น Domain Param
+func (c *CreateTransferInput) ToDomainCreateParam() domain.CreateTransferParam {
+	return domain.CreateTransferParam{
+		Amount:          c.Amount,
+		FromAccountID:   c.FromAccountID,
+		ToAccountID:     c.ToAccountID,
+		CategoryID:      c.CategoryID,
+		Note:            c.Note,
+		TransactionDate: c.TransactionDate,
+	}
+}
+
 // --- Mapper Functions (แปลงจาก Domain Model เข้าสู่ DTO ขาออก) ---
 
 // ToDomainUpdateParam แปลงข้อมูลจาก DTO เป็น Domain Param

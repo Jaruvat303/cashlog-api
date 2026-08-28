@@ -20,6 +20,22 @@ func (m *TransactionUsecaseMock) SyncTransaction(ctx context.Context, imageBytes
 	return args.Get(0).(*Transaction), args.Error(1)
 }
 
+func (m *TransactionUsecaseMock) CreateTransaction(ctx context.Context, input CreateTransactionParam) (*Transaction, error) {
+	args := m.Called(ctx, input)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*Transaction), args.Error(1)
+}
+
+func (m *TransactionUsecaseMock) CreateTransfer(ctx context.Context, input CreateTransferParam) (*Transaction, error) {
+	args := m.Called(ctx, input)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*Transaction), args.Error(1)
+}
+
 func (m *TransactionUsecaseMock) FetchTransactions(ctx context.Context, input FetchTransactionInput) (*FetchTransactionResult, error) {
 	args := m.Called(ctx, input)
 	if args.Get(0) == nil {
