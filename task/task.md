@@ -73,7 +73,7 @@
 |---|---|---|
 | TASK-001 Config & Auth Middleware | ✅ เสร็จ | เพิ่ม `APIKey`, `OwnerNameAliases` ใน config; สร้าง `middleware/auth.go`; wire เข้า router (`v1` group ทั้งหมด) |
 | TASK-002 Domain Layer (Account entity + แก้ Transaction) | ✅ เสร็จ | Step 1-6 ครบตาม breakdown (ดูหัวข้อ 7) — verified: `go build ./...`, `go vet ./...`, `go test ./...` ผ่านหมด (branch `feature/domain-account-layer`) |
-| TASK-003 Migration (manual drop + AutoMigrate) | ⏸️ รอผู้ใช้ทำเอง | Manual step บน Supabase SQL Editor (นอก scope โค้ด, Claude ไม่มีสิทธิ์เข้าถึง) — breakdown พร้อมแล้ว (ดูหัวข้อ 8), ผู้ใช้ต้องรันเองก่อน deploy จริง |
+| TASK-003 Migration (manual drop + AutoMigrate) | ✅ เสร็จ (ผู้ใช้ยืนยัน) | ยืนยันจากผู้ใช้ระหว่าง TASK-016 ว่ารันแล้วบน dev/staging Supabase — verified จริงตอน TASK-016: `go run ./cmd/api` เชื่อมต่อ + AutoMigrate + seed สำเร็จ ไม่มี error |
 | TASK-004 Account Repository | ✅ เสร็จ | `internal/repository/postgres/pg_account.go` — ตาม pattern `pg_category.go`; `Delete` เป็น **soft delete** (`UPDATE is_active=false`) ตาม field spec ของ `Account.IsActive` (ต่างจาก Category ที่ hard delete) |
 | TASK-005 Account Usecase | ✅ เสร็จ | `internal/usecase/account_usecase.go` — ตาม pattern `category_usecase.go`; ไม่มี unit test ตาม Decision #7 (CRUD ปล่อยให้ integration test คลุม) |
 | TASK-006 Account DTO + Handler + Route | ✅ เสร็จ | `account_dto.go` + `account_handler.go` ตาม pattern `category_dto.go`/`category_handler.go`; route `/api/v1/accounts` (POST/GET/PATCH/DELETE) ผูกใน `router.go` + DI ใน `main.go`; regenerate Swagger docs (`swag init --parseDependency --parseInternal`) แล้ว; `DeleteAccount` = soft delete (`is_active=false`) |
@@ -86,7 +86,7 @@
 | TASK-013 Balance & Summary Fix (รวม bug #12) | ✅ เสร็จ | ยืนยัน scope จากบรรทัด 175 เดิม ("เพิ่ม total_transfer ใช้ field ที่เพิ่มใน Step 4 ของ TASK-002") — ไม่ใช่ per-account running balance (ยังเป็น backlog ตาม FR-1.4); fix bug #12 ใน `pg_transaction.go`: เดิมเทียบ `"INCOME"` (uppercase) กับค่าจริงที่เก็บ lowercase ทำให้ทุกธุรกรรมตกเป็น expense หมด (รวม transfer ที่ไม่มี branch เลย) → เปลี่ยนเป็น `switch` เทียบกับ `domain.TransactionTypeIncome`/`TransactionTypeTransfer` constants; transfer เพิ่มเข้า `TotalTransfer` โดยไม่สร้าง category breakdown (category_id เป็น nil เสมอสำหรับ transfer); เพิ่ม `TotalTransfer` เข้า `DashboardSummaryResponse` DTO ที่ตกหล่นจาก TASK-002 (domain มี field อยู่แล้วแต่ DTO ยังไม่ map); regenerate Swagger docs |
 | TASK-014 Unit Tests (BR-1, BR-2) | ✅ เสร็จ | `internal/usecase/transaction_classify_test.go` (`package usecase` แบบ white-box เพื่อเทส unexported function ตรงๆ ตาม Decision #7 — ต่างจากไฟล์เทสอื่นที่ใช้ `usecase_test`); `TestClassifyTransactionType` 9 case ครบ 4 branch ของ BR-1 (#26) + case-insensitive/partial match/edge case (ชื่อว่าง, ไม่มี alias, alias ว่างปนอยู่); `TestMatchAccountByKeyword` 7 case ครอบ BR-2 รวม conflict resolution เลือก keyword ยาวสุด (#5), case-insensitive/partial match, ไม่มี match, ไม่มีบัญชี active |
 | TASK-015 Router Wiring (final) | ✅ เสร็จ | 🐛 **พบบั๊กจริงระหว่าง audit**: `AuthMiddleware` ถูกใส่แบบ global (`app.Use()`) ใน `main.go` ก่อน `router.SetupRoutes()` ถูกเรียก — ยืนยันด้วย empirical test (เขียน Fiber repro เปล่าๆ) ว่า `app.Use()` middleware ที่ลงทะเบียนก่อนจะดักจับทุก route รวมถึง route ที่ลงทะเบียนทีหลัง (`/health`, `/metrics`, `/swagger`) ด้วย — ขัดกับ intent เดิมที่บันทึกไว้ในหัวข้อ 6 ("/health, /metrics, /swagger ไม่ผ่านเพราะอยู่นอก group") ผลคือ Cloud Run health check จะโดนบล็อกด้วย 401 เพราะไม่มี `X-API-Key` header จริง; **แก้แล้ว**: ย้าย `AuthMiddleware` ออกจาก global `app.Use()` มาครอบเฉพาะ `/api/v1` group ใน `router.SetupRoutes()` แทน (`router.go` รับ `cfg *config.Config`, `appLogger` เพิ่ม); เขียน throwaway integration test ยืนยันว่า `/health` ไม่ต้องใช้ API key แล้ว แต่ `/api/v1/*` ยังต้องใช้เหมือนเดิม (ลบไฟล์ทดสอบทิ้งหลังยืนยัน ไม่ commit เพราะ scope unit test จำกัดแค่ BR-1/BR-2 ตาม Decision #7); route อื่นๆ ที่ต้องมีครบ (accounts/transactions/categories) ยืนยันว่าครบแล้วจากงานก่อนหน้า |
-| TASK-016 Manual Integration Test | ⬜ | |
+| TASK-016 Manual Integration Test | ✅ เสร็จ (บางส่วน) | รันแอปจริงบน dev/staging Supabase ที่ user ยืนยันว่า migrate แล้ว (ผู้ใช้ยืนยัน env + migration status ก่อนเริ่ม) — ดูรายละเอียดด้านล่าง |
 
 ## 5. Config ที่ต้องตั้งใน `.env` (เพิ่มจากเดิม)
 
@@ -204,3 +204,29 @@ DROP TABLE IF EXISTS transactions CASCADE;
 **Step 5 — ทำซ้ำบน production project เมื่อพร้อม promote**
 Repeat Step 1-4 บน production Supabase project แยกต่างหาก — ไม่ auto-run พร้อมกับ dev
 ✅ Acceptance: ทำเป็นขั้นตอนแยก หลังจาก dev ผ่านการทดสอบ TASK-002 ครบแล้วเท่านั้น (ไม่ใช่ scope ของ TASK-003 ตอนนี้ แค่บันทึกไว้เป็น checklist สำหรับตอน deploy จริง)
+
+## 9. TASK-016 — Manual Integration Test (สิ่งที่ทำไปแล้ว + ผลลัพธ์)
+
+> รันแอปจริงด้วย `go run ./cmd/api` เชื่อมต่อ dev/staging Supabase (ผู้ใช้ยืนยัน migration + environment ก่อนเริ่ม) และ remote Redis จริง — ทดสอบผ่าน curl ตรงๆ ไม่ใช่ unit test
+
+### 🐛 บั๊กที่พบระหว่างทดสอบ (แก้แล้วทั้งคู่)
+
+**บั๊ก 1 — Auth bypass เมื่อ `API_KEY` ว่าง**
+`.env` ในเครื่องมี `API_KEY=` (ค่าว่าง) — พบว่า request ที่ไม่ส่ง header `X-API-Key` มาเลยผ่าน auth ไปได้ (เพราะ `"" != ""` เป็น false) ในขณะที่ key ผิดถูก reject ปกติ (`"garbage" != ""` เป็น true) ตรงตาม TASK-001 doc เดิมที่บอกว่าควรมี guard นี้แต่โค้ดจริงไม่มี — **แก้แล้ว**: เพิ่มเช็ค `if apiKey == ""` ใน `middleware/auth.go` ให้ return 500 "Server misconfiguration" แทนการเปิดโหว่เงียบๆ ตาม intent เดิม — verified live: ตั้งค่า `API_KEY` ว่างแล้ว request ไม่ส่ง key ได้ 500 ตามคาด, ตั้ง key จริงแล้วพฤติกรรม (no key→401, wrong key→401, correct key→200) ถูกต้องครบ
+
+**บั๊ก 2 — `Account.MatchingKeywords` (StringSlice) เขียนลง DB ไม่ได้เมื่อไม่ว่าง**
+`POST /accounts` ด้วย `matching_keywords` ที่ไม่ว่าง (เช่น `["Dime"]`) พังด้วย Postgres error `invalid input syntax for type json (SQLSTATE 22P02)` — สาเหตุ: `StringSlice.Value()` (`internal/domain/account.go`) return `json.Marshal(s)` ตรงๆ ซึ่งเป็น `[]byte` ทำให้ pgx ส่งเป็น bytea literal แทนที่จะเป็น JSON text (ต่างจาก case `s == nil` ที่ return string `"[]"` ตรงๆ จึงทำงานได้) — **นี่คือบั๊กร้ายแรงที่ทำให้ BR-2 (auto-match) ใช้งานไม่ได้เลยสำหรับบัญชีที่สร้าง/แก้ผ่าน API** (บัญชี SCB ที่ seed ผ่าน raw SQL ไม่โดนกระทบเพราะไม่ผ่าน path นี้) — **แก้แล้ว**: แปลงเป็น `string(b)` ก่อน return — verified live: สร้างบัญชีพร้อม `matching_keywords` สำเร็จ, list กลับมาตรงตามที่ส่งไป
+
+### ✅ Flow ที่ทดสอบผ่านแล้ว (live, ต่อ dev/staging DB จริง)
+- Auth: no key → 401, wrong key → 401, correct key → 200, `/health` ไม่ต้องใช้ key (ยืนยัน TASK-015 fix ใช้งานได้จริง), `/health` แสดง `database:OK, gemini_api:CONFIGURED` (Redis DOWN เพราะ sandbox นี้ต่อ DNS ออกไม่ได้ — ไม่เกี่ยวกับโค้ด, cache fallback ทำงานถูกต้อง ไม่ทำให้ request อื่นพัง)
+- Account: create (พร้อม matching_keywords), list active, soft-delete (is_active→false, หายจาก active list)
+- Transaction manual create: income + expense สำเร็จ, ขาด `account_id` → 400 validation, `account_id` ไม่มีจริง → 404, `account_id` inactive → `ACCOUNT_INACTIVE`
+- Transfer manual create: สำเร็จ (account_id=null, from/to ถูกต้อง), `from==to` → `TRANSFER_SAME_ACCOUNT`, ส่ง `category_id` มา → `CATEGORY_NOT_ALLOWED_FOR_TRANSFER`, บัญชีปลายทาง inactive → `ACCOUNT_INACTIVE`
+- PATCH: เติม `category_id` บน expense สำเร็จ (nested category info ถูกต้อง), เซ็ต `account_id`/`category_id` บน transfer → reject ถูกต้อง, เซ็ต `from_account_id` บน non-transfer → reject ถูกต้อง
+- Dashboard summary: **ยืนยัน bug #12 fix (TASK-013) ตรงกับข้อมูลจริง** — สร้าง income 500 + expense 100 + transfer 200 แล้ว summary ตอบ `total_income:500, total_expense:100, total_transfer:200` ถูกต้องครบ (ก่อนแก้ทั้งหมดจะตกเป็น expense หมด)
+- Delete: ลบ transaction ทั้ง 3 รายการ + soft-delete บัญชีทดสอบทั้ง 2 บัญชี → DB กลับสู่สถานะ clean (เหลือแค่ SCB ที่ seed ไว้), summary กลับเป็น 0 ครบ
+
+### ⚠️ ยังไม่ได้ทดสอบ (นอกเหนือความสามารถของ session นี้)
+- **`POST /transactions/upload-slip` (BR-1/BR-2 auto-scan แบบเต็ม)**: ต้องใช้ภาพสลิปจริงที่มีชื่อจริงตรงกับ `OWNER_NAME_ALIASES` ถึงจะทดสอบ classify/match ได้อย่างมีความหมาย — ไม่ทดสอบด้วยภาพปลอมเพราะจะเปลืองโควต้า Gemini จริงโดยไม่ได้ผลลัพธ์ที่มีประโยชน์ **ผู้ใช้ต้องทดสอบเองด้วยภาพสลิปจริง**
+- **สังเกต (ไม่ใช่บั๊ก)**: `transaction_date` ใน response แสดงเป็น UTC (`...Z`) ไม่ใช่ `+07:00` แม้ค่าจริง (instant) จะถูกต้อง — เป็นพฤติกรรมเดิมของ `MapToTransactionResponse` ที่ไม่ได้แก้ในรอบนี้ (ไม่กระทบ correctness แค่ format การแสดงผล)
+- Production Supabase project (Step 5 ของ TASK-003) — ยังไม่ได้ทำ ตามแผนเดิมว่าต้อง promote แยกต่างหากทีหลัง

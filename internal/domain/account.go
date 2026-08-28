@@ -15,7 +15,13 @@ func (s StringSlice) Value() (driver.Value, error) {
 	if s == nil {
 		return "[]", nil
 	}
-	return json.Marshal(s)
+	// ต้อง return string ไม่ใช่ []byte — pgx ส่ง []byte เป็น bytea literal ทำให้ Postgres
+	// ปฏิเสธด้วย "invalid input syntax for type json" เมื่อ insert/update ลง column jsonb
+	b, err := json.Marshal(s)
+	if err != nil {
+		return nil, err
+	}
+	return string(b), nil
 }
 
 func (s *StringSlice) Scan(value interface{}) error {
