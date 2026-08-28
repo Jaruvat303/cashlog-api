@@ -20,8 +20,13 @@ type TransactionResponse struct {
 	ID              uint                     `json:"id" example:"102"`
 	Amount          float64                  `json:"amount" example:"350.50"`
 	TransactionType string                   `json:"transaction_type" example:"expense"`
+	SenderName      string                   `json:"sender_name" example:"นายเอ สมมติ"`
 	ReceiverName    string                   `json:"receiver_name" example:"ร้านข้าวมันไก่ป้าใจ"`
 	Note            string                   `json:"note" example:"มื้อเที่ยงกับทีมงาน"`
+	AccountID       *int64                   `json:"account_id" example:"1"`
+	FromAccountID   *int64                   `json:"from_account_id" example:"1"`
+	ToAccountID     *int64                   `json:"to_account_id" example:"2"`
+	Source          string                   `json:"source" example:"slip"`
 	LocalImageName  string                   `json:"local_image_name" example:"slip_20260714_xyz.jpg"`
 	TransactionDate string                   `json:"transaction_date" example:"2026-07-14T12:30:00+07:00"`
 	Category        *TransactionCategoryInfo `json:"category"` // แนบข้อมูลหมวดหมู่ย่อยแบบ Nested Object
@@ -79,8 +84,13 @@ func MapToTransactionResponse(tx *domain.Transaction) TransactionResponse {
 		ID:              tx.ID,
 		Amount:          tx.Amount,
 		TransactionType: tx.TransactionType,
+		SenderName:      tx.SenderName,
 		ReceiverName:    tx.ReceiverName,
 		Note:            tx.Note,
+		AccountID:       tx.AccountID,
+		FromAccountID:   tx.FromAccountID,
+		ToAccountID:     tx.ToAccountID,
+		Source:          tx.Source,
 		LocalImageName:  tx.LocalImageName,
 		TransactionDate: tx.TransactionDate.Format(time.RFC3339),
 		Category:        categoryInfo,

@@ -78,7 +78,7 @@
 | TASK-005 Account Usecase | ✅ เสร็จ | `internal/usecase/account_usecase.go` — ตาม pattern `category_usecase.go`; ไม่มี unit test ตาม Decision #7 (CRUD ปล่อยให้ integration test คลุม) |
 | TASK-006 Account DTO + Handler + Route | ✅ เสร็จ | `account_dto.go` + `account_handler.go` ตาม pattern `category_dto.go`/`category_handler.go`; route `/api/v1/accounts` (POST/GET/PATCH/DELETE) ผูกใน `router.go` + DI ใน `main.go`; regenerate Swagger docs (`swag init --parseDependency --parseInternal`) แล้ว; `DeleteAccount` = soft delete (`is_active=false`) |
 | TASK-007 Seed Accounts | ✅ เสร็จ | `pkg/database/init_accounts.sql` + `SeedAccounts()` ตาม pattern `init_categories.sql`/`SeedCategories()`; wire ใน `main.go`; seed เฉพาะ **SCB** (bank, opening_balance=5000, keywords `["SCB","ไทยพาณิชย์"]`) — icon_key/color_hex ปล่อยว่าง รอผู้ใช้ใส่เอง; เพิ่ม `uniqueIndex` บน `Account.Name` เพื่อให้ `ON CONFLICT (name)` ทำงานได้ (ตาม pattern Category) — `ON CONFLICT` ไม่ overwrite `opening_balance`/`icon_key`/`color_hex`/`is_active` กันข้อมูลที่ user แก้เองถูกเขียนทับตอน restart |
-| TASK-008 Transaction DTO Updates | ⬜ | |
+| TASK-008 Transaction DTO Updates | ✅ เสร็จ | `TransactionResponse` เพิ่ม `sender_name`, `account_id`, `from_account_id`, `to_account_id`, `source` (flat fields, ยังไม่ nested Account info เหมือน Category เพราะ repo ยังไม่ Preload Account/FromAccount/ToAccount — ทำเพิ่มทีหลังได้ถ้าต้องการ); `UpdateTransactionInput` ยังไม่แตะ — รอ TASK-012 (PATCH ส่วนขยาย); regenerate Swagger docs แล้ว |
 | TASK-009 BR-1 Auto-classify | ⬜ | |
 | TASK-010 BR-2 Auto-match Account | ⬜ | |
 | TASK-011 Manual Create Endpoint | ⬜ | |

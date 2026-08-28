@@ -173,6 +173,9 @@ definitions:
     type: object
   github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto.TransactionResponse:
     properties:
+      account_id:
+        example: 1
+        type: integer
       amount:
         example: 350.5
         type: number
@@ -180,6 +183,9 @@ definitions:
         allOf:
         - $ref: '#/definitions/github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto.TransactionCategoryInfo'
         description: แนบข้อมูลหมวดหมู่ย่อยแบบ Nested Object
+      from_account_id:
+        example: 1
+        type: integer
       id:
         example: 102
         type: integer
@@ -192,6 +198,15 @@ definitions:
       receiver_name:
         example: ร้านข้าวมันไก่ป้าใจ
         type: string
+      sender_name:
+        example: นายเอ สมมติ
+        type: string
+      source:
+        example: slip
+        type: string
+      to_account_id:
+        example: 2
+        type: integer
       transaction_date:
         example: "2026-07-14T12:30:00+07:00"
         type: string

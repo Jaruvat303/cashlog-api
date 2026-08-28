@@ -1019,6 +1019,10 @@ const docTemplate = `{
         "github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto.TransactionResponse": {
             "type": "object",
             "properties": {
+                "account_id": {
+                    "type": "integer",
+                    "example": 1
+                },
                 "amount": {
                     "type": "number",
                     "example": 350.5
@@ -1030,6 +1034,10 @@ const docTemplate = `{
                             "$ref": "#/definitions/github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto.TransactionCategoryInfo"
                         }
                     ]
+                },
+                "from_account_id": {
+                    "type": "integer",
+                    "example": 1
                 },
                 "id": {
                     "type": "integer",
@@ -1046,6 +1054,18 @@ const docTemplate = `{
                 "receiver_name": {
                     "type": "string",
                     "example": "ร้านข้าวมันไก่ป้าใจ"
+                },
+                "sender_name": {
+                    "type": "string",
+                    "example": "นายเอ สมมติ"
+                },
+                "source": {
+                    "type": "string",
+                    "example": "slip"
+                },
+                "to_account_id": {
+                    "type": "integer",
+                    "example": 2
                 },
                 "transaction_date": {
                     "type": "string",
