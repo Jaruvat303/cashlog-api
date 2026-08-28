@@ -15,6 +15,7 @@ import (
 func SetupRoutes(app *fiber.App,
 	txHandler *handler.TransactionHandler,
 	catHandler *handler.CategoryHandler,
+	accHandler *handler.AccountHandler,
 	healthHandler *handler.HealthHandler,
 ) {
 
@@ -52,5 +53,11 @@ func SetupRoutes(app *fiber.App,
 	cat.Get("/", catHandler.FetchCategoriesByType)
 	cat.Patch("/:id", catHandler.UpdateCategory)
 	cat.Delete("/:id", catHandler.DeleteCategory)
+
+	acc := v1.Group("/accounts")
+	acc.Post("/", accHandler.CreateAccount)
+	acc.Get("/", accHandler.FetchActiveAccounts)
+	acc.Patch("/:id", accHandler.UpdateAccount)
+	acc.Delete("/:id", accHandler.DeleteAccount)
 
 }

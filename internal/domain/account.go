@@ -36,7 +36,7 @@ func (s *StringSlice) Scan(value interface{}) error {
 
 type Account struct {
 	ID               int64       `gorm:"primaryKey;autoIncrement"`
-	Name             string      `gorm:"type:varchar(100);not null"`
+	Name             string      `gorm:"type:varchar(100);not null;uniqueIndex"`
 	AccountType      string      `gorm:"type:varchar(50);not null"` // cash, bank, investment, ewallet
 	OpeningBalance   float64     `gorm:"type:numeric(12,2);not null;default:0"`
 	MatchingKeywords StringSlice `gorm:"type:jsonb;column:matching_keywords"`

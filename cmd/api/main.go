@@ -49,6 +49,11 @@ func main() {
 		appLogger.Fatal("Warning: failed to seed categories: ", zap.Error(err))
 	}
 
+	// Create Seed Account Data
+	if err := database.SeedAccounts(ctx, db, appLogger); err != nil {
+		appLogger.Fatal("Warning: failed to seed accounts: ", zap.Error(err))
+	}
+
 	// Dependency Injection
 	txRepository := postgres.NewGormTransactionRepository(db, appLogger)
 	cacheRepository := redis.NewRedisDashboardRepository(rdb)
@@ -58,14 +63,17 @@ func main() {
 	}
 
 	categoryRepository := postgres.NewGORMCategoryRepository(db, appLogger)
+	accountRepository := postgres.NewGORMAccountRepository(db, appLogger)
 
 	// Inject เลเยอร์นอกเข้าไปใน Layer Usecase
 	txUsecase := usecase.NewTransactionUsecase(txRepository, cacheRepository, geminiClient, appLogger)
 	catUsecase := usecase.NewCategoryUsecase(categoryRepository, appLogger)
+	accUsecase := usecase.NewAccountUsecase(accountRepository, appLogger)
 
 	// Inject Usecase เข้าไปใน Handler
 	txhandler := handler.NewTransactionHandler(txUsecase, appLogger)
 	catHandler := handler.NewCategoryHandler(catUsecase, appLogger)
+	accHandler := handler.NewAccountHandler(accUsecase, appLogger)
 
 	// Health Check Handler
 	healthHandler := handler.NewHealthHandler(db, rdb)
@@ -83,7 +91,7 @@ func main() {
 	app.Use(middleware.NewTimezoneMiddleware())                                  // ล็อกเวลาสากลในระบบให้เป็นเวลาไทยเสมอ
 
 	// ส่ง handler เพื่อสร้าง Http route
-	router.SetupRoutes(app, txhandler, catHandler, healthHandler)
+	router.SetupRoutes(app, txhandler, catHandler, accHandler, healthHandler)
 
 	// 6. สั่งเปิดเซิร์ฟเวอร์รันระบบตามพอร์ตที่กำหนด
 	log.Printf("🚀 CashLog API runs smoothly on environment [%s]", cfg.AppEnv)

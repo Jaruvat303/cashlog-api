@@ -1,5 +1,35 @@
 basePath: /api/v1
 definitions:
+  github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto.AccountResponse:
+    properties:
+      account_type:
+        example: bank
+        type: string
+      color_hex:
+        example: '#4F46E5'
+        type: string
+      icon_key:
+        example: bank
+        type: string
+      id:
+        example: 1
+        type: integer
+      is_active:
+        example: true
+        type: boolean
+      matching_keywords:
+        example:
+        - SCB
+        items:
+          type: string
+        type: array
+      name:
+        example: SCB
+        type: string
+      opening_balance:
+        example: 1000
+        type: number
+    type: object
   github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto.CategoryBreakdownDTO:
     properties:
       category_id:
@@ -32,6 +62,44 @@ definitions:
       type:
         example: expense
         type: string
+    type: object
+  github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto.CreateAccountInput:
+    properties:
+      account_type:
+        enum:
+        - cash
+        - bank
+        - investment
+        - ewallet
+        example: bank
+        type: string
+      color_hex:
+        example: '#4F46E5'
+        maxLength: 10
+        type: string
+      icon_key:
+        example: bank
+        maxLength: 50
+        type: string
+      matching_keywords:
+        example:
+        - SCB
+        items:
+          type: string
+        type: array
+      name:
+        example: SCB
+        maxLength: 100
+        minLength: 1
+        type: string
+      opening_balance:
+        example: 1000
+        minimum: 0
+        type: number
+    required:
+    - account_type
+    - matching_keywords
+    - name
     type: object
   github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto.CreateCategoryInput:
     properties:
@@ -131,6 +199,41 @@ definitions:
         example: expense
         type: string
     type: object
+  github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto.UpdateAccountInput:
+    properties:
+      account_type:
+        enum:
+        - cash
+        - bank
+        - investment
+        - ewallet
+        example: bank
+        type: string
+      color_hex:
+        example: '#4F46E5'
+        maxLength: 10
+        type: string
+      icon_key:
+        example: bank
+        maxLength: 50
+        type: string
+      is_active:
+        example: true
+        type: boolean
+      matching_keywords:
+        example:
+        - SCB
+        items:
+          type: string
+        type: array
+      name:
+        example: SCB
+        maxLength: 100
+        minLength: 1
+        type: string
+    required:
+    - matching_keywords
+    type: object
   github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto.UpdateCategoryInput:
     properties:
       name:
@@ -148,14 +251,30 @@ definitions:
   github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto.UpdateTransactionInput:
     properties:
       amount:
+        example: 150.5
         type: number
       category_id:
+        example: 2
         type: integer
       note:
+        example: ค่ากาแฟอเมริกาโน่เย็น
         maxLength: 255
         type: string
       transaction_date:
+        example: "2026-07-24T14:30:00+07:00"
         type: string
+    type: object
+  ? github_com_Jaruvat303_cashlog_pkg_response.JsonResponse-array_github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto_AccountResponse
+  : properties:
+      data:
+        items:
+          $ref: '#/definitions/github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto.AccountResponse'
+        type: array
+      message:
+        type: string
+      success:
+        example: true
+        type: boolean
     type: object
   ? github_com_Jaruvat303_cashlog_pkg_response.JsonResponse-array_github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto_CategoryResponse
   : properties:
@@ -163,6 +282,16 @@ definitions:
         items:
           $ref: '#/definitions/github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto.CategoryResponse'
         type: array
+      message:
+        type: string
+      success:
+        example: true
+        type: boolean
+    type: object
+  ? github_com_Jaruvat303_cashlog_pkg_response.JsonResponse-github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto_AccountResponse
+  : properties:
+      data:
+        $ref: '#/definitions/github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto.AccountResponse'
       message:
         type: string
       success:
@@ -248,6 +377,166 @@ info:
   title: CashLog API
   version: "1.0"
 paths:
+  /accounts:
+    get:
+      consumes:
+      - application/json
+      description: ดึงรายการบัญชีทั้งหมดที่ is_active=true
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'FetchActiveAccounts successful <br>message: FetchActiveAccounts
+            successfull'
+          schema:
+            $ref: '#/definitions/github_com_Jaruvat303_cashlog_pkg_response.JsonResponse-array_github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto_AccountResponse'
+        "499":
+          description: 'Client Closed Request  <br>error_code: REQUEST_CANCELED <br>message:
+            The request was canceled by the user'
+          schema:
+            $ref: '#/definitions/github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto.ErrorResponseDTO'
+        "500":
+          description: 'Internal Server Error <br>error_code: INTERNAL_SERVER_ERROR
+            or INTERNAL_DATABASE_ERROR <br>message: Something went wrong, please try
+            again later'
+          schema:
+            $ref: '#/definitions/github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto.ErrorResponseDTO'
+        "504":
+          description: 'Gateway Timeout <br>error_code: DATABASE_TIMEOUT <br>message:
+            The database operation timed out, please try again'
+          schema:
+            $ref: '#/definitions/github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto.ErrorResponseDTO'
+      summary: ดึงรายการ Account ที่ใช้งานอยู่
+      tags:
+      - Account
+    post:
+      consumes:
+      - application/json
+      description: สร้างบัญชีใหม่ โดยต้องระบุชื่อและประเภทของบัญชี
+      parameters:
+      - description: ข้อมูลสำหรับสร้าง Account
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto.CreateAccountInput'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: create account successfull
+          schema:
+            $ref: '#/definitions/github_com_Jaruvat303_cashlog_pkg_response.JsonResponse-github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto_AccountResponse'
+        "400":
+          description: 'Bad Request  <br>error_code: INVALID_INPUT_PARAMETERS <br>message:
+            1. Invalid JSON format.  2. Validation failed for the request data.'
+          schema:
+            $ref: '#/definitions/github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto.ErrorResponseDTO'
+        "499":
+          description: 'Client Closed Request  <br>error_code: REQUEST_CANCELED <br>message:
+            The request was canceled by the user'
+          schema:
+            $ref: '#/definitions/github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto.ErrorResponseDTO'
+        "500":
+          description: 'Internal Server Error <br>error_code: INTERNAL_SERVER_ERROR
+            or INTERNAL_DATABASE_ERROR <br>message: Something went wrong, please try
+            again later'
+          schema:
+            $ref: '#/definitions/github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto.ErrorResponseDTO'
+        "504":
+          description: 'Gateway Timeout <br>error_code: DATABASE_TIMEOUT <br>message:
+            The database operation timed out, please try again'
+          schema:
+            $ref: '#/definitions/github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto.ErrorResponseDTO'
+      summary: สร้าง Account ใหม่
+      tags:
+      - Account
+  /accounts/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: ปิดใช้งานบัญชี (soft delete) โดยต้องระบุ ID ของบัญชีที่ต้องการลบ
+      parameters:
+      - description: ID ของ Account ที่ต้องการลบ
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "400":
+          description: 'Bad Request <br>error_code: INVALID_INPUT_PARAMETERS <br>Message:
+            Invalid ID format. The path parameter ''id'' must be a positive integer.'
+          schema:
+            $ref: '#/definitions/github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto.ErrorResponseDTO'
+        "499":
+          description: 'Client Closed Request  <br>error_code: REQUEST_CANCELED <br>message:
+            The request was canceled by the user'
+          schema:
+            $ref: '#/definitions/github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto.ErrorResponseDTO'
+        "500":
+          description: 'Internal Server Error <br>error_code: INTERNAL_SERVER_ERROR
+            or INTERNAL_DATABASE_ERROR <br>message: Something went wrong, please try
+            again later'
+          schema:
+            $ref: '#/definitions/github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto.ErrorResponseDTO'
+        "504":
+          description: 'Gateway Timeout <br>error_code: DATABASE_TIMEOUT <br>message:
+            The database operation timed out, please try again'
+          schema:
+            $ref: '#/definitions/github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto.ErrorResponseDTO'
+      summary: ลบ Account
+      tags:
+      - Account
+    patch:
+      consumes:
+      - application/json
+      description: อัปเดตข้อมูลบัญชี โดยต้องระบุ ID ของบัญชีที่ต้องการอัปเดต
+      parameters:
+      - description: ID ของ Account ที่ต้องการอัปเดต
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: ข้อมูลสำหรับอัปเดต Account
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto.UpdateAccountInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: update account successfull
+          schema:
+            $ref: '#/definitions/github_com_Jaruvat303_cashlog_pkg_response.JsonResponse-github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto_AccountResponse'
+        "400":
+          description: 'Bad Request  <br>error_code: INVALID_INPUT_PARAMETERS <br>message:
+            1. Invalid ID format (must be a positive integer) 2. Invalid JSON format
+            3. Validation failed for the request data'
+          schema:
+            $ref: '#/definitions/github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto.ErrorResponseDTO'
+        "499":
+          description: 'Client Closed Request  <br>error_code: REQUEST_CANCELED <br>message:
+            The request was canceled by the user'
+          schema:
+            $ref: '#/definitions/github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto.ErrorResponseDTO'
+        "500":
+          description: 'Internal Server Error <br>error_code: INTERNAL_SERVER_ERROR
+            or INTERNAL_DATABASE_ERROR <br>message: Something went wrong, please try
+            again later'
+          schema:
+            $ref: '#/definitions/github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto.ErrorResponseDTO'
+        "504":
+          description: 'Gateway Timeout <br>error_code: DATABASE_TIMEOUT <br>message:
+            The database operation timed out, please try again'
+          schema:
+            $ref: '#/definitions/github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto.ErrorResponseDTO'
+      summary: อัปเดต Account
+      tags:
+      - Account
   /categories:
     get:
       consumes:

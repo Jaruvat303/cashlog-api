@@ -88,3 +88,19 @@ func SeedCategories(ctx context.Context, db *gorm.DB, appLogger logger.Logger) e
 	return nil
 
 }
+
+//go:embed init_accounts.sql
+var initAccountsSQL string
+
+// SeedAccounts ทำหน้าที่อ่านไฟล์ SQL และ Execute เข้า Database
+func SeedAccounts(ctx context.Context, db *gorm.DB, appLogger logger.Logger) error {
+
+	// รันคำสั่ง SQL ผ่าน GORM
+	if err := db.Exec(initAccountsSQL).Error; err != nil {
+		return err
+	}
+
+	appLogger.Info("Successfully seeded accounts data!")
+	return nil
+
+}
