@@ -13,19 +13,18 @@ import (
 
 // InitRedisDB ทำหน้าที่เปิดการเชื่อมต่อ Redis และส่งกลับตัวแปร Client กลับไปใช้งาน
 func InitRedisDB(ctx context.Context, cfg *config.Config, appLogger logger.Logger) *redis.Client {
-	var opt *redis.Options
-	var err error
 
-	opt = &redis.Options{
-		Addr:     cfg.RedisHost,
-		Username: cfg.RedisUsename,
-		Password: cfg.RedisPassword,
-
-		// สำคัญมากสำหรับ Upstash Cloud: ต้องเปิด TLS Configuration ด้วยถ้าใช้คลาวด์
-		TLSConfig: &tls.Config{
-			InsecureSkipVerify: true,
-		},
+	opt, err := redis.ParseURL(cfg.RedisURL)
+	if err != nil {
+		appLogger.Fatal("❌ Failed to parse Redis URL", zap.Error(err))
 	}
+
+	// ตั้งค่า TLS สำหรับการเชื่อมต่อ Redis ผ่าน SSL/TLS
+	opt.TLSConfig = &tls.Config{
+		InsecureSkipVerify: true, // ปิดการตรวจสอบใบรับรอง (ไม่แนะนำสำหรับ Production)
+	}
+
+	// 🌟 1. เพิ่มการตั้งค่า Connection Pool เพื่อปรับปรุงประสิทธิภาพและความเสถียรของการเชื่อมต่อ
 
 	// 🌟 2. อัดฉีดการตั้งค่า Connection Pool เกรด Senior ของคุณเข้าไปเพิ่ม
 	opt.PoolSize = 10

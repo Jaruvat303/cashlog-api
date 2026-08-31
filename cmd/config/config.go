@@ -24,10 +24,7 @@ type Config struct {
 	DBConnMaxLifetime time.Duration
 
 	// Redis Configs
-	RedisHost     string
-	RedisUsename  string
-	RedisPassword string
-	RedisDB       int
+	RedisURL string
 
 	// Google Cloud ProjectID
 	GCProjectID string
@@ -53,10 +50,7 @@ func LoadConfig() *Config {
 		DBMaxIdleConns:    getEnvAsInt("DB_MAX_IDEL_CONNS", 10),
 		DBMaxOpenConns:    getEnvAsInt("DB_MAX_OPEN_CONNS", 100),
 		DBConnMaxLifetime: getEnvAsDuration("DB_CONN_MAX_LIFETIME", 30*time.Minute),
-		RedisHost:         getEnv("REDIS_HOST", "localhost"),
-		RedisPassword:     getEnv("REDIS_PASSWORD", ""),
-		RedisUsename:      getEnv("REDIS_USERNAME", "default"),
-		RedisDB:           getEnvAsInt("REDIS_DB", 0),
+		RedisURL:          getEnv("REDIS_URL", ""),
 		GCProjectID:       getEnv("GOOGLE_CLOUD_PROJECT", ""),
 		GeminiAPIKey:      getEnv("GEMINI_API_KEY", ""),
 		ModelName:         getEnv("MODEL_NAME", ""),
