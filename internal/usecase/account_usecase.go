@@ -19,8 +19,7 @@ func (a *accountUsecase) CreateAccount(ctx context.Context, input domain.CreateA
 		AccountType:      input.AccountType,
 		OpeningBalance:   input.OpeningBalance,
 		MatchingKeywords: domain.StringSlice(input.MatchingKeywords),
-		IconKey:          input.IconKey,
-		ColorHex:         input.ColorHex,
+		BankIcon:         input.BankIcon,
 	}
 
 	if err := a.accountRepo.Create(ctx, acc); err != nil {
@@ -68,11 +67,8 @@ func (a *accountUsecase) UpdateAccount(ctx context.Context, id uint, input domai
 	if input.MatchingKeywords != nil {
 		acc.MatchingKeywords = domain.StringSlice(input.MatchingKeywords)
 	}
-	if input.IconKey != "" {
-		acc.IconKey = input.IconKey
-	}
-	if input.ColorHex != "" {
-		acc.ColorHex = input.ColorHex
+	if input.BankIcon != nil {
+		acc.BankIcon = *input.BankIcon
 	}
 	if input.IsActive != nil {
 		acc.IsActive = *input.IsActive

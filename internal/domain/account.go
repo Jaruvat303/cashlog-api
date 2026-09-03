@@ -46,8 +46,7 @@ type Account struct {
 	AccountType      string      `gorm:"type:varchar(50);not null"` // cash, bank, investment, ewallet
 	OpeningBalance   float64     `gorm:"type:numeric(12,2);not null;default:0"`
 	MatchingKeywords StringSlice `gorm:"type:jsonb;column:matching_keywords"`
-	IconKey          string      `gorm:"type:varchar(50);column:icon_key"`
-	ColorHex         string      `gorm:"type:varchar(10);column:color_hex"`
+	BankIcon         string      `gorm:"type:varchar(100);column:bank_icon"`
 	IsActive         bool        `gorm:"not null;default:true"`
 	CreatedAt        time.Time   `gorm:"autoCreateTime;not null"`
 	UpdatedAt        time.Time   `gorm:"autoUpdateTime;not null"`
@@ -73,15 +72,13 @@ type CreateAccountParam struct {
 	AccountType      string
 	OpeningBalance   float64
 	MatchingKeywords []string
-	IconKey          string
-	ColorHex         string
+	BankIcon         string
 }
 
 type UpdateAccountParam struct {
 	Name             string
 	AccountType      string
 	MatchingKeywords []string
-	IconKey          string
-	ColorHex         string
+	BankIcon         *string
 	IsActive         *bool
 }

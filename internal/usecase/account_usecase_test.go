@@ -17,8 +17,7 @@ func TestCreateAccount(t *testing.T) {
 		AccountType:      "cash",
 		OpeningBalance:   1000.00,
 		MatchingKeywords: []string{"test", "account"},
-		IconKey:          "icon_test",
-		ColorHex:         "#FFFFFF",
+		BankIcon:         "scb",
 	}
 
 	mockAcc := &domain.Account{
@@ -26,8 +25,7 @@ func TestCreateAccount(t *testing.T) {
 		AccountType:      mockInput.AccountType,
 		OpeningBalance:   mockInput.OpeningBalance,
 		MatchingKeywords: domain.StringSlice(mockInput.MatchingKeywords),
-		IconKey:          mockInput.IconKey,
-		ColorHex:         mockInput.ColorHex,
+		BankIcon:         mockInput.BankIcon,
 	}
 
 	tests := []struct {
@@ -87,8 +85,6 @@ func TestDeleteAccount(t *testing.T) {
 		AccountType:      "cash",
 		OpeningBalance:   1000.00,
 		MatchingKeywords: domain.StringSlice([]string{"test", "account"}),
-		IconKey:          "icon_test",
-		ColorHex:         "#FFFFFF",
 	}
 
 	tests := []struct {
@@ -156,8 +152,6 @@ func TestFetchActiveAccounts(t *testing.T) {
 		AccountType:      "cash",
 		OpeningBalance:   1000.00,
 		MatchingKeywords: domain.StringSlice([]string{"test", "account"}),
-		IconKey:          "icon_test_1",
-		ColorHex:         "#FFFFFF",
 		IsActive:         true,
 	}
 
@@ -167,8 +161,6 @@ func TestFetchActiveAccounts(t *testing.T) {
 		AccountType:      "bank",
 		OpeningBalance:   2000.00,
 		MatchingKeywords: domain.StringSlice([]string{"test", "account"}),
-		IconKey:          "icon_test_2",
-		ColorHex:         "#000000",
 		IsActive:         true,
 	}
 
@@ -224,12 +216,12 @@ func TestFetchActiveAccounts(t *testing.T) {
 }
 
 func TestUpdateAccount(t *testing.T) {
+	updatedBankIcon := "kbank"
 	mockInput := domain.UpdateAccountParam{
 		Name:             "updated account",
 		AccountType:      "bank",
 		MatchingKeywords: []string{"updated", "account"},
-		IconKey:          "icon_updated",
-		ColorHex:         "#000000",
+		BankIcon:         &updatedBankIcon,
 		IsActive:         new(bool),
 	}
 
@@ -239,8 +231,7 @@ func TestUpdateAccount(t *testing.T) {
 		AccountType:      "cash",
 		OpeningBalance:   1000.00,
 		MatchingKeywords: domain.StringSlice([]string{"test", "account"}),
-		IconKey:          "icon_test",
-		ColorHex:         "#FFFFFF",
+		BankIcon:         "scb",
 		IsActive:         true,
 	}
 
@@ -262,10 +253,24 @@ func TestUpdateAccount(t *testing.T) {
 				repo.On("Update", mock.Anything, mock.MatchedBy(func(acc *domain.Account) bool {
 					return acc.Name == mockInput.Name &&
 						acc.AccountType == mockInput.AccountType &&
-						acc.IconKey == mockInput.IconKey &&
-						acc.ColorHex == mockInput.ColorHex &&
+						acc.BankIcon == *mockInput.BankIcon &&
 						acc.IsActive == *mockInput.IsActive &&
 						assert.ObjectsAreEqual(domain.StringSlice(mockInput.MatchingKeywords), acc.MatchingKeywords)
+				}), uint(mockAcc.ID)).Return(nil)
+			},
+			expectedError: nil,
+		},
+		{
+			name:      "1b. Success - ล้างค่า BankIcon เป็นค่าว่างได้",
+			accountID: uint(mockAcc.ID),
+			input: domain.UpdateAccountParam{
+				BankIcon: new(string), // ตั้งใจส่ง "" เข้ามาเพื่อล้างค่า BankIcon เดิม
+			},
+			setupMock: func(repo *domain.AccountRepositoryMock) {
+				accCopy := *mockAcc
+				repo.On("GetByID", mock.Anything, uint(mockAcc.ID)).Return(&accCopy, nil)
+				repo.On("Update", mock.Anything, mock.MatchedBy(func(acc *domain.Account) bool {
+					return acc.BankIcon == ""
 				}), uint(mockAcc.ID)).Return(nil)
 			},
 			expectedError: nil,

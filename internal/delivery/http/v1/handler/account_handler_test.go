@@ -24,6 +24,7 @@ func TestCreateAccount(t *testing.T) {
 		AccountType:      "cash",
 		OpeningBalance:   1000.0,
 		MatchingKeywords: []string{"test", "account"},
+		BankIcon:         "cash",
 	}
 
 	mockResult := &domain.Account{
