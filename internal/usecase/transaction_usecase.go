@@ -13,10 +13,12 @@ import (
 )
 
 type transactionUsecase struct {
-	txRepo     domain.TransactionRepository
-	cacheRepo  domain.CacheRepository
-	geminiRepo domain.GeminiSlipRepository
-	log        logger.Logger
+	txRepo           domain.TransactionRepository
+	cacheRepo        domain.CacheRepository
+	geminiRepo       domain.GeminiSlipRepository
+	accountRepo      domain.AccountRepo
+	ownerNameAliases []string
+	log              logger.Logger
 }
 
 // Delete implements [domain.TransactionUsecase].
@@ -85,7 +87,61 @@ func (t *transactionUsecase) UpdateTransaction(ctx context.Context, id uint, inp
 	}
 
 	if input.CategoryID != nil {
-		tx.CategoryID = *input.CategoryID
+		// category_id ห้ามใช้กับธุรกรรม transfer (Decision #21)
+		if tx.TransactionType == domain.TransactionTypeTransfer {
+			return nil, domain.ErrCategoryNotAllowedForTransfer
+		}
+		tx.CategoryID = input.CategoryID
+	}
+
+	if input.AccountID != nil {
+		// account_id ใช้ได้เฉพาะธุรกรรมที่ไม่ใช่ transfer (Decision #20)
+		if tx.TransactionType == domain.TransactionTypeTransfer {
+			return nil, domain.ErrInvalidInput
+		}
+		account, err := t.accountRepo.GetByID(ctx, uint(*input.AccountID))
+		if err != nil {
+			return nil, err
+		}
+		if !account.IsActive {
+			return nil, domain.ErrAccountInactive
+		}
+		tx.AccountID = input.AccountID
+	}
+
+	if input.FromAccountID != nil {
+		// from_account_id ใช้ได้เฉพาะธุรกรรม transfer เท่านั้น
+		if tx.TransactionType != domain.TransactionTypeTransfer {
+			return nil, domain.ErrInvalidInput
+		}
+		fromAccount, err := t.accountRepo.GetByID(ctx, uint(*input.FromAccountID))
+		if err != nil {
+			return nil, err
+		}
+		if !fromAccount.IsActive {
+			return nil, domain.ErrAccountInactive
+		}
+		tx.FromAccountID = input.FromAccountID
+	}
+
+	if input.ToAccountID != nil {
+		// to_account_id ใช้ได้เฉพาะธุรกรรม transfer เท่านั้น — ใช้เติมค่าที่ BR-2 ไม่พยายาม match ตอนสร้าง (Decision #23)
+		if tx.TransactionType != domain.TransactionTypeTransfer {
+			return nil, domain.ErrInvalidInput
+		}
+		toAccount, err := t.accountRepo.GetByID(ctx, uint(*input.ToAccountID))
+		if err != nil {
+			return nil, err
+		}
+		if !toAccount.IsActive {
+			return nil, domain.ErrAccountInactive
+		}
+		tx.ToAccountID = input.ToAccountID
+	}
+
+	// ตรวจสอบว่า from_account_id ไม่เท่ากับ to_account_id หลังจาก apply การแก้ไขแล้ว (Decision #4)
+	if tx.FromAccountID != nil && tx.ToAccountID != nil && *tx.FromAccountID == *tx.ToAccountID {
+		return nil, domain.ErrTransferSameAccount
 	}
 
 	if input.TransactionDate != nil {
@@ -255,6 +311,128 @@ func (t *transactionUsecase) GetDashboardSummary(ctx context.Context, scope stri
 	return summary, nil
 }
 
+// invalidateSummaryCache ทุบแคช dashboard summary ของเดือนและปีที่ระบุ
+func (t *transactionUsecase) invalidateSummaryCache(ctx context.Context, log logger.Logger, txDate time.Time) {
+	periodKey := fmt.Sprintf("summary:monthly:%d-%02d", txDate.Year(), txDate.Month())
+	if err := t.cacheRepo.InvalidateCache(ctx, periodKey); err != nil {
+		log.Warn("failed to delete cache from redis ",
+			zap.Error(err),
+			zap.String("cache_key", periodKey),
+		)
+	}
+
+	yearPeriodKey := fmt.Sprintf("summary:yearly:%d", txDate.Year())
+	if err := t.cacheRepo.InvalidateCache(ctx, yearPeriodKey); err != nil {
+		log.Warn("failed to delete cache from redis ",
+			zap.Error(err),
+			zap.String("cache_key", yearPeriodKey),
+		)
+	}
+}
+
+// CreateTransaction implements [domain.TransactionUsecase].
+func (t *transactionUsecase) CreateTransaction(ctx context.Context, input domain.CreateTransactionParam) (*domain.Transaction, error) {
+	log := logger.Ctx(ctx)
+	if log == nil {
+		log = t.log
+	}
+
+	// ตรวจสอบว่า account มีอยู่จริงและ active อยู่ (Decision #6, #17)
+	account, err := t.accountRepo.GetByID(ctx, uint(input.AccountID))
+	if err != nil {
+		return nil, err
+	}
+	if !account.IsActive {
+		return nil, domain.ErrAccountInactive
+	}
+
+	txDate := timeutil.NowInBangkok()
+	if input.TransactionDate != nil {
+		txDate = *input.TransactionDate
+	}
+
+	accountID := input.AccountID
+	newTx := &domain.Transaction{
+		Amount:          input.Amount,
+		TransactionType: input.TransactionType,
+		Note:            input.Note,
+		CategoryID:      input.CategoryID,
+		AccountID:       &accountID,
+		Source:          domain.TransactionSourceManual,
+		TransactionDate: txDate,
+	}
+
+	if err := t.txRepo.Insert(ctx, newTx); err != nil {
+		return nil, fmt.Errorf("failed to save trasaction to database: %w", err)
+	}
+
+	t.invalidateSummaryCache(ctx, log, newTx.TransactionDate)
+
+	return newTx, nil
+}
+
+// CreateTransfer implements [domain.TransactionUsecase].
+func (t *transactionUsecase) CreateTransfer(ctx context.Context, input domain.CreateTransferParam) (*domain.Transaction, error) {
+	log := logger.Ctx(ctx)
+	if log == nil {
+		log = t.log
+	}
+
+	// category_id ต้องไม่ถูกส่งมาตอนสร้าง transfer (Decision #21)
+	if input.CategoryID != nil {
+		return nil, domain.ErrCategoryNotAllowedForTransfer
+	}
+
+	// from_account_id ต้องไม่เท่ากับ to_account_id (Decision #4)
+	if input.FromAccountID == input.ToAccountID {
+		return nil, domain.ErrTransferSameAccount
+	}
+
+	// ตรวจสอบว่าทั้งสองบัญชีมีอยู่จริงและ active อยู่ (Decision #22)
+	fromAccount, err := t.accountRepo.GetByID(ctx, uint(input.FromAccountID))
+	if err != nil {
+		return nil, err
+	}
+	if !fromAccount.IsActive {
+		return nil, domain.ErrAccountInactive
+	}
+
+	toAccount, err := t.accountRepo.GetByID(ctx, uint(input.ToAccountID))
+	if err != nil {
+		return nil, err
+	}
+	if !toAccount.IsActive {
+		return nil, domain.ErrAccountInactive
+	}
+
+	txDate := timeutil.NowInBangkok()
+	if input.TransactionDate != nil {
+		txDate = *input.TransactionDate
+	}
+
+	fromAccountID := input.FromAccountID
+	toAccountID := input.ToAccountID
+	newTx := &domain.Transaction{
+		Amount:          input.Amount,
+		TransactionType: domain.TransactionTypeTransfer,
+		Note:            input.Note,
+		AccountID:       nil, // บังคับ nil เสมอสำหรับ transfer (Decision #20)
+		FromAccountID:   &fromAccountID,
+		ToAccountID:     &toAccountID,
+		CategoryID:      nil,
+		Source:          domain.TransactionSourceManual,
+		TransactionDate: txDate,
+	}
+
+	if err := t.txRepo.Insert(ctx, newTx); err != nil {
+		return nil, fmt.Errorf("failed to save trasaction to database: %w", err)
+	}
+
+	t.invalidateSummaryCache(ctx, log, newTx.TransactionDate)
+
+	return newTx, nil
+}
+
 // SyncTransaction implements [domain.TransactionUsecase].
 func (t *transactionUsecase) SyncTransaction(ctx context.Context, imageBytes []byte, localImageName string) (*domain.Transaction, error) {
 	log := logger.Ctx(ctx)
@@ -298,16 +476,37 @@ func (t *transactionUsecase) SyncTransaction(ctx context.Context, imageBytes []b
 		parsedTime = timeutil.NowInBangkok()
 	}
 
+	// BR-1: จำแนกประเภทธุรกรรมจากชื่อผู้ส่ง/ผู้รับเทียบกับ OWNER_NAME_ALIASES
+	txType := classifyTransactionType(slipResult.SenderName, slipResult.ReceiverName, t.ownerNameAliases)
+
+	// BR-2: จับคู่บัญชีจาก app_name เทียบกับ MatchingKeywords ของบัญชีที่ active อยู่
+	activeAccounts, err := t.accountRepo.GetAllActive(ctx)
+	if err != nil {
+		return nil, err
+	}
+	matchedAccountID := matchAccountByKeyword(slipResult.AppName, activeAccounts)
+
+	var accountID, fromAccountID *int64
+	if txType == domain.TransactionTypeTransfer {
+		// Transfer: match เฉพาะ from_account_id, to_account_id ปล่อย nil เสมอ (Decision #23)
+		fromAccountID = matchedAccountID
+	} else {
+		accountID = matchedAccountID
+	}
+
 	// บันทึก Transaction ใหม่ลงในฐานข้อมูล
-	txType := "expense"
-	categoryID := 1 // กำหนดเริ่มต้น 1 (ไม่ระบุประเภท)
+	// CategoryID ปล่อย nil เสมอสำหรับ auto-scan (Gemini ไม่มีทางรู้ category จริง) — user PATCH เอาเอง
 	newTx := &domain.Transaction{
 		Amount:          amount,
 		TransactionType: txType,
+		SenderName:      slipResult.SenderName,
 		ReceiverName:    slipResult.ReceiverName,
+		AccountID:       accountID,
+		FromAccountID:   fromAccountID,
 		LocalImageName:  localImageName,
 		TransactionDate: parsedTime,
-		CategoryID:      int64(categoryID),
+		Source:          domain.TransactionSourceSlip,
+		CategoryID:      nil,
 	}
 
 	if err := t.txRepo.Insert(ctx, newTx); err != nil {
@@ -344,11 +543,15 @@ func (t *transactionUsecase) SyncTransaction(ctx context.Context, imageBytes []b
 func NewTransactionUsecase(txRepo domain.TransactionRepository,
 	cacheRepo domain.CacheRepository,
 	geminiRepo domain.GeminiSlipRepository,
+	accountRepo domain.AccountRepo,
+	ownerNameAliases []string,
 	log logger.Logger) domain.TransactionUsecase {
 	return &transactionUsecase{
-		txRepo:     txRepo,
-		cacheRepo:  cacheRepo,
-		geminiRepo: geminiRepo,
-		log:        log,
+		txRepo:           txRepo,
+		cacheRepo:        cacheRepo,
+		geminiRepo:       geminiRepo,
+		accountRepo:      accountRepo,
+		ownerNameAliases: ownerNameAliases,
+		log:              log,
 	}
 }

@@ -107,17 +107,15 @@ jobs:
             DB_MAX_IDEL_CONNS=2
             DB_MAX_OPEN_CONNS=5
             DB_CONN_MAX_LIFETIME=30
-            REDIS_HOST=${{ vars.REDIS_HOST }}
-            REDIS_USERNAME=default
-            REDIS_DB=0
             GOOGLE_CLOUD_PROJECT=cashlog-api
             MODEL_NAME=gemini-3.5-flash-lite
 
           # สลับชื่อกุญแจในการไขความลับบน GCP ตามค่าที่แมปไว้ใน GitHub Secrets ของแต่ละฝั่ง
           secrets: |
             DB_URL=${{ vars.GCP_DB_SECRET_NAME }}:latest
-            REDIS_PASSWORD=${{ vars.GCP_REDIS_SECRET_NAME }}:latest
+            REDIS_URL=${{ vars.GCP_REDIS_SECRET_NAME }}:latest
             GEMINI_API_KEY=${{ vars.GCP_GEMINI_SECRET_NAME }}:latest
+            API_KEY=${{ vars.GCP_API_KEY_SECRET_NAME }}:latest
 
       # 🎯 พ่น URL ของ API ตัวจริงออกมาแสดงผลบนหน้าจอเมื่อ Deploy สำเร็จ
       - name: 'Show Production URL Output'

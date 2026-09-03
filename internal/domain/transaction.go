@@ -5,14 +5,35 @@ import (
 	"time"
 )
 
+// ค่าที่เป็นไปได้ของ TransactionType
+const (
+	TransactionTypeIncome   = "income"
+	TransactionTypeExpense  = "expense"
+	TransactionTypeTransfer = "transfer"
+)
+
+// ค่าที่เป็นไปได้ของ Source (ที่มาของ transaction)
+const (
+	TransactionSourceSlip   = "slip"
+	TransactionSourceManual = "manual"
+)
+
 type Transaction struct {
-	ID              uint      `gorm:"primaryKey;autoIncrement"`
-	Amount          float64   `gorm:"type:numeric(12,2);not null"`
-	TransactionType string    `gorm:"type:varchar(50);not null"` // income, expense
-	ReceiverName    string    `gorm:"type:varchar(255)"`
-	Note            string    `gorm:"type:text"`
-	CategoryID      int64     `gorm:"not null"`
-	Category        Category  `gorm:"foreignKey:CategoryID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT;"`
+	ID              uint    `gorm:"primaryKey;autoIncrement"`
+	Amount          float64 `gorm:"type:numeric(12,2);not null"`
+	TransactionType string  `gorm:"type:varchar(50);not null"` // income, expense, transfer
+	SenderName      string  `gorm:"type:varchar(255)"`
+	ReceiverName    string  `gorm:"type:varchar(255)"`
+	Note            string  `gorm:"type:text"`
+	CategoryID      *int64
+	Category        Category `gorm:"foreignKey:CategoryID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT;"`
+	AccountID       *int64
+	Account         *Account `gorm:"foreignKey:AccountID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT;"`
+	FromAccountID   *int64
+	FromAccount     *Account `gorm:"foreignKey:FromAccountID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT;"`
+	ToAccountID     *int64
+	ToAccount       *Account  `gorm:"foreignKey:ToAccountID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT;"`
+	Source          string    `gorm:"type:varchar(20)"` // slip, manual
 	LocalImageName  string    `gorm:"type:varchar(255)"`
 	TransactionDate time.Time `gorm:"not null"`
 	CreatedAt       time.Time `gorm:"autoCreateTime;not null"`
@@ -44,6 +65,10 @@ type CacheRepository interface {
 type TransactionUsecase interface {
 	// SyncTransaction รับไฟล์ภาพสลิปในรูปแบบ byte array และชื่อไฟล์ภาพ เพื่อไปประมาลผลและบันทึกข้อมูล
 	SyncTransaction(ctx context.Context, imageBytes []byte, localImageName string) (*Transaction, error)
+	// CreateTransaction สร้างธุรกรรม income/expense แบบ manual (ไม่ผ่านสลิป)
+	CreateTransaction(ctx context.Context, input CreateTransactionParam) (*Transaction, error)
+	// CreateTransfer สร้างธุรกรรม transfer แบบ manual ระหว่าง 2 บัญชี
+	CreateTransfer(ctx context.Context, input CreateTransferParam) (*Transaction, error)
 	FetchTransactions(ctx context.Context, input FetchTransactionInput) (*FetchTransactionResult, error)
 	GetDashboardSummary(ctx context.Context, scope string, month, year int) (*DashboardSummary, error)
 	UpdateTransaction(ctx context.Context, id uint, input UpdateTransactionParam) (*Transaction, error)
@@ -54,6 +79,30 @@ type UpdateTransactionParam struct {
 	Amount          *float64
 	Note            *string
 	CategoryID      *int64
+	AccountID       *int64
+	FromAccountID   *int64
+	ToAccountID     *int64
+	TransactionDate *time.Time
+}
+
+// CreateTransactionParam พารามิเตอร์สำหรับสร้างธุรกรรม income/expense แบบ manual
+type CreateTransactionParam struct {
+	Amount          float64
+	TransactionType string // income, expense
+	AccountID       int64
+	CategoryID      *int64
+	Note            string
+	TransactionDate *time.Time // nil แปลว่าใช้เวลาปัจจุบัน
+}
+
+// CreateTransferParam พารามิเตอร์สำหรับสร้างธุรกรรม transfer แบบ manual
+// CategoryID เก็บไว้เพื่อเช็คและ reject ถ้า client ส่งมา (Decision #21) — ไม่ถูกใช้บันทึกจริง
+type CreateTransferParam struct {
+	Amount          float64
+	FromAccountID   int64
+	ToAccountID     int64
+	CategoryID      *int64
+	Note            string
 	TransactionDate *time.Time
 }
 

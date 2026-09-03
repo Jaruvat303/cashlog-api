@@ -68,16 +68,16 @@ func TestDashboardSummary(t *testing.T) {
 					Return(nil, errors.New("something went wrong in usecase"))
 			},
 			expectedStatus: fiber.StatusInternalServerError,
-			expectedBody:   "something went wrong in usecase",
+			expectedBody:   "Something went wrong, please try again later.",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Arrange
-			app := fiber.New()
 			mockUsecase := new(domain.TransactionUsecaseMock)
 			mockLog := logger.NewNopLogger()
+			app := newTestApp(mockLog)
 
 			tt.setupMock(mockUsecase)
 
@@ -149,16 +149,16 @@ func TestGetMonthlyHistory(t *testing.T) {
 				uc.On("FetchTransactions", mock.Anything, mockInput).Return(nil, errors.New("something went wrong in usecase"))
 			},
 			expectedStatus: fiber.StatusInternalServerError,
-			expectedBody:   "something went wrong in usecase",
+			expectedBody:   "Something went wrong, please try again later.",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Arrange
-			app := fiber.New()
 			mockUsecase := new(domain.TransactionUsecaseMock)
 			mockLog := logger.NewNopLogger()
+			app := newTestApp(mockLog)
 
 			tt.setupMock(mockUsecase)
 
@@ -202,7 +202,7 @@ func TestUpdateTransaction(t *testing.T) {
 	mockResult := &domain.Transaction{
 		ID:              1,
 		Amount:          200,
-		CategoryID:      3,
+		CategoryID:      pkg.PTR(int64(3)),
 		Note:            "edit amount",
 		TransactionDate: fixedTime,
 	}
@@ -272,7 +272,7 @@ func TestUpdateTransaction(t *testing.T) {
 				})).Return(nil, domain.ErrInternalDB)
 			},
 			expectedStatus: fiber.StatusInternalServerError,
-			expectedBody:   "internal database error",
+			expectedBody:   "Something went wrong, please try again later.",
 		},
 		{
 			name:        "5. Success - อัปเดตข้อมูลสำเร็จ",
@@ -307,9 +307,9 @@ func TestUpdateTransaction(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Arrange
-			app := fiber.New()
 			mockUsecase := new(domain.TransactionUsecaseMock)
 			mockLog := logger.NewNopLogger()
+			app := newTestApp(mockLog)
 			tt.setupMock(mockUsecase)
 
 			// ผูก route เข้ากับ Handler
@@ -370,7 +370,7 @@ func TestDeleteTransaction(t *testing.T) {
 				uc.On("DeleteTransaction", mock.Anything, uint(1)).Return(domain.ErrInternalDB)
 			},
 			expectedStatus: fiber.StatusInternalServerError,
-			expectedBody:   "internal database error",
+			expectedBody:   "Something went wrong, please try again later.",
 		},
 		{
 			name:    "3. Success - ลบข้อมูลสำเร็จ",
@@ -386,9 +386,9 @@ func TestDeleteTransaction(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Arrange
-			app := fiber.New()
 			mockUsecase := new(domain.TransactionUsecaseMock)
 			mockLog := logger.NewNopLogger()
+			app := newTestApp(mockLog)
 			tt.setupMock(mockUsecase)
 
 			// ผูก route เข้ากับ Handler
@@ -479,9 +479,9 @@ func TestUplaodSlipAndLog(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Arrange
-			app := fiber.New()
 			mockUsecase := new(domain.TransactionUsecaseMock)
 			mockLog := logger.NewNopLogger()
+			app := newTestApp(mockLog)
 
 			tt.setupMock(mockUsecase)
 

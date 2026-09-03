@@ -8,6 +8,7 @@ type GeminiSlipData struct {
 	Amount       float64 `json:"amount"`
 	SenderName   string  `json:"sender_name"`
 	ReceiverName string  `json:"receiver_name"`
+	AppName      string  `json:"app_name"`
 	TransTime    string  `json:"trans_time"`
 }
 

@@ -2,7 +2,6 @@ package database
 
 import (
 	"context"
-	"crypto/tls"
 	"time"
 
 	"github.com/Jaruvat303/cashlog/cmd/config"
@@ -12,20 +11,22 @@ import (
 )
 
 // InitRedisDB ทำหน้าที่เปิดการเชื่อมต่อ Redis และส่งกลับตัวแปร Client กลับไปใช้งาน
-func InitRedisDB(ctx context.Context, cfg *config.Config) *redis.Client {
-	var opt *redis.Options
-	var err error
+func InitRedisDB(ctx context.Context, cfg *config.Config, appLogger logger.Logger) *redis.Client {
 
-	opt = &redis.Options{
-		Addr:     cfg.RedisHost,
-		Username: cfg.RedisUsename,
-		Password: cfg.RedisPassword,
-
-		// สำคัญมากสำหรับ Upstash Cloud: ต้องเปิด TLS Configuration ด้วยถ้าใช้คลาวด์
-		TLSConfig: &tls.Config{
-			InsecureSkipVerify: true,
-		},
+	opt, err := redis.ParseURL(cfg.RedisURL)
+	if err != nil {
+		// 🚨 ไม่สั่ง Fatal ให้แอปตาย หากตั้งค่า Redis URL ผิดหรือไม่ได้ตั้งค่าไว้ (ตามหลัก Graceful Degradation)
+		appLogger.Warn("⚠️ Failed to parse Redis URL, falling back to default connection options", zap.Error(err))
+		opt = &redis.Options{}
 	}
+
+	// ตั้งค่า TLS สำหรับการเชื่อมต่อ Redis ผ่าน SSL/TLS เฉพาะกรณีที่ URL ใช้ scheme "rediss://"
+	// (ParseURL จะตั้งค่า opt.TLSConfig ให้ไม่เป็น nil เฉพาะตอนที่ URL เป็น rediss:// เท่านั้น)
+	if opt.TLSConfig != nil {
+		opt.TLSConfig.InsecureSkipVerify = true // ปิดการตรวจสอบใบรับรอง (ไม่แนะนำสำหรับ Production)
+	}
+
+	// 🌟 1. เพิ่มการตั้งค่า Connection Pool เพื่อปรับปรุงประสิทธิภาพและความเสถียรของการเชื่อมต่อ
 
 	// 🌟 2. อัดฉีดการตั้งค่า Connection Pool เกรด Senior ของคุณเข้าไปเพิ่ม
 	opt.PoolSize = 10
@@ -45,9 +46,9 @@ func InitRedisDB(ctx context.Context, cfg *config.Config) *redis.Client {
 	if err != nil {
 		// 🚨 หากเชื่อมต่อไม่ได้บน Production เราจะไม่สั่ง Fatalf จนแอปตาย (ตามหลัก Graceful Degradation)
 		// แต่จะบันทึกเป็น WARNING เผื่อให้ระบบถอยไปใช้ฐานข้อมูลตรงๆ แทนได้
-		logger.Ctx(ctx).Warn("⚠️ Redis connection failed, application will use database fallback", zap.Error(err))
+		appLogger.Warn("⚠️ Redis connection failed, application will use database fallback", zap.Error(err))
 	} else {
-		logger.Ctx(ctx).Info("⚡ Redis database connection established cleanly via Config Struct!")
+		appLogger.Info("⚡ Redis database connection established cleanly via Config Struct!")
 	}
 
 	return rdb

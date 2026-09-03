@@ -18,6 +18,7 @@ const slipScanPrompt = `คุณคือระบบอ่านข้อม�
 - amount: จำนวนเงินที่โอน (ตัวเลขล้วน ไม่มีคอมม่าหรือสัญลักษณ์สกุลเงิน)
 - sender_name: ชื่อบัญชีต้นทาง (ผู้โอน) ตามที่ปรากฏในสลิป
 - receiver_name: ชื่อบัญชีปลายทาง (ผู้รับเงิน) ตามที่ปรากฏในสลิป
+- app_name: ชื่อแอปธนาคาร/โมบายแบงกิ้งที่ออกสลิปนี้ (เช่น ดูจากโลโก้/หัวกระดาษ/ชื่อธนาคารที่แสดงบนสลิป เช่น "SCB EASY", "ไทยพาณิชย์", "K PLUS", "กสิกรไทย", "Dime!") — ถ้าดูจากภาพไม่ออกว่าเป็นแอปหรือธนาคารใด ให้ตอบค่าว่าง
 - trans_time: วันและเวลาที่ทำรายการ แปลงเป็นรูปแบบ string: "YYYY-MM-DD HH:mm:ss" เท่านั้น
 
 กฎสำคัญสำหรับการแปลง trans_time (อ้างอิงปีปัจจุบัน พ.ศ. 2569 / ค.ศ. 2026):
@@ -42,9 +43,10 @@ var slipResponseSchema = &genai.Schema{
 		"amount":        {Type: genai.TypeNumber},
 		"sender_name":   {Type: genai.TypeString},
 		"receiver_name": {Type: genai.TypeString},
+		"app_name":      {Type: genai.TypeString},
 		"trans_time":    {Type: genai.TypeString},
 	},
-	Required: []string{"amount", "sender_name", "receiver_name", "trans_time"},
+	Required: []string{"amount", "sender_name", "receiver_name", "app_name", "trans_time"},
 }
 
 // ExtractData ส่งภาพสลิปไปให้ Gemini อ่าน แล้วแปลงผลลัพธ์เป็น domain.GeminiSlipData

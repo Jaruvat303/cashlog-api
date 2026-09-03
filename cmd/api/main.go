@@ -40,32 +40,40 @@ func main() {
 	ctx = logger.WithContext(ctx, appLogger)
 
 	// Connect database
-	db := database.InitPostgresDB(ctx, cfg)
-	rdb := database.InitRedisDB(ctx, cfg)
+	db := database.InitPostgresDB(ctx, cfg, appLogger)
+	rdb := database.InitRedisDB(ctx, cfg, appLogger)
 
 	// Create Seed Category Data
-	err := database.SeedCategories(ctx, db)
+	err := database.SeedCategories(ctx, db, appLogger)
 	if err != nil {
 		appLogger.Fatal("Warning: failed to seed categories: ", zap.Error(err))
+	}
+
+	// Create Seed Account Data
+	if err := database.SeedAccounts(ctx, db, appLogger); err != nil {
+		appLogger.Fatal("Warning: failed to seed accounts: ", zap.Error(err))
 	}
 
 	// Dependency Injection
 	txRepository := postgres.NewGormTransactionRepository(db, appLogger)
 	cacheRepository := redis.NewRedisDashboardRepository(rdb)
-	geminiClient, err := geminiClient.NewClient(ctx, *cfg)
+	geminiClient, err := geminiClient.NewClient(ctx, cfg.GeminiAPIKey, cfg.ModelName, appLogger)
 	if err != nil {
 		appLogger.Fatal("Warning: failed to create geminiClient: ", zap.Error(err))
 	}
 
 	categoryRepository := postgres.NewGORMCategoryRepository(db, appLogger)
+	accountRepository := postgres.NewGORMAccountRepository(db, appLogger)
 
 	// Inject เลเยอร์นอกเข้าไปใน Layer Usecase
-	txUsecase := usecase.NewTransactionUsecase(txRepository, cacheRepository, geminiClient, appLogger)
+	txUsecase := usecase.NewTransactionUsecase(txRepository, cacheRepository, geminiClient, accountRepository, cfg.OwnerNameAliases, appLogger)
 	catUsecase := usecase.NewCategoryUsecase(categoryRepository, appLogger)
+	accUsecase := usecase.NewAccountUsecase(accountRepository, appLogger)
 
 	// Inject Usecase เข้าไปใน Handler
 	txhandler := handler.NewTransactionHandler(txUsecase, appLogger)
 	catHandler := handler.NewCategoryHandler(catUsecase, appLogger)
+	accHandler := handler.NewAccountHandler(accUsecase, appLogger)
 
 	// Health Check Handler
 	healthHandler := handler.NewHealthHandler(db, rdb)
@@ -76,13 +84,16 @@ func main() {
 	})
 
 	// Middleware Setting
-	app.Use(middleware.NewRecoverMiddleware(appLogger))  // ต้องอยู่บนสุดเพื่อดักจับจุดตาย
-	app.Use(middleware.NewCORSMiddleware())              // อนุญาตให้หน้าบ้าน Flutter ยิงเข้ามาได้
-	app.Use(middleware.NewRequestLogger(cfg, appLogger)) // เปิดระบบ Structured JSON Log บันทึกลง Cloud
-	app.Use(middleware.NewTimezoneMiddleware())          // ล็อกเวลาสากลในระบบให้เป็นเวลาไทยเสมอ
+	// หมายเหตุ: AuthMiddleware ไม่ได้ใส่ตรงนี้แบบ global เพราะ app.Use() จะครอบทุก route รวมถึง
+	// /health, /metrics, /swagger ที่ควรเปิดให้เข้าถึงได้โดยไม่ต้องใช้ API key (เช่น Cloud Run health check)
+	// จึงย้ายไปครอบเฉพาะ /api/v1 group ใน router.SetupRoutes แทน
+	app.Use(middleware.NewRecoverMiddleware(appLogger))                          // ต้องอยู่บนสุดเพื่อดักจับจุดตาย
+	app.Use(middleware.NewCORSMiddleware())                                      // อนุญาตให้หน้าบ้าน Flutter ยิงเข้ามาได้
+	app.Use(middleware.NewRequestLogger(cfg.AppEnv, cfg.GCProjectID, appLogger)) // เปิดระบบ Structured JSON Log บันทึกลง Cloud
+	app.Use(middleware.NewTimezoneMiddleware())                                  // ล็อกเวลาสากลในระบบให้เป็นเวลาไทยเสมอ
 
 	// ส่ง handler เพื่อสร้าง Http route
-	router.SetupRoutes(app, txhandler, catHandler, healthHandler)
+	router.SetupRoutes(app, cfg, appLogger, txhandler, catHandler, accHandler, healthHandler)
 
 	// 6. สั่งเปิดเซิร์ฟเวอร์รันระบบตามพอร์ตที่กำหนด
 	log.Printf("🚀 CashLog API runs smoothly on environment [%s]", cfg.AppEnv)
