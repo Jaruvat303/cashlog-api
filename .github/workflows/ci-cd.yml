@@ -115,6 +115,7 @@ jobs:
             DB_URL=${{ vars.GCP_DB_SECRET_NAME }}:latest
             REDIS_URL=${{ vars.GCP_REDIS_SECRET_NAME }}:latest
             GEMINI_API_KEY=${{ vars.GCP_GEMINI_SECRET_NAME }}:latest
+            API_KEY=${{ vars.GCP_API_KEY_SECRET_NAME }}:latest
 
       # 🎯 พ่น URL ของ API ตัวจริงออกมาแสดงผลบนหน้าจอเมื่อ Deploy สำเร็จ
       - name: 'Show Production URL Output'

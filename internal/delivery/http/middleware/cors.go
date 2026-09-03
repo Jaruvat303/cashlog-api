@@ -8,7 +8,7 @@ import (
 func NewCORSMiddleware() fiber.Handler {
 	return cors.New(cors.Config{
 		AllowOrigins:     "*", // ในอนาคตถ้าขึ้น Production สามารถใส่ Domain เฉพาะได้
-		AllowHeaders:     "Origin, Content-Type, Accept, Authorization",
+		AllowHeaders:     "Origin, Content-Type, Accept, Authorization, X-API-Key",
 		AllowMethods:     "GET, POST, PUT, DELETE, OPTIONS",
 		AllowCredentials: false,
 	})
