@@ -3,13 +3,14 @@ package dto
 import "github.com/Jaruvat303/cashlog/internal/domain"
 
 type DashboardSummaryResponse struct {
-	TotalIncome  float64                `json:"total_income"`
-	TotalExpense float64                `json:"total_expense"`
-	Scope        string                 `json:"scope"`
-	Month        int                    `json:"month"`
-	Year         int                    `json:"year"`
-	Income       []CategoryBreakdownDTO `json:"income"`
-	Expense      []CategoryBreakdownDTO `json:"expense"`
+	TotalIncome   float64                `json:"total_income"`
+	TotalExpense  float64                `json:"total_expense"`
+	TotalTransfer float64                `json:"total_transfer"`
+	Scope         string                 `json:"scope"`
+	Month         int                    `json:"month"`
+	Year          int                    `json:"year"`
+	Income        []CategoryBreakdownDTO `json:"income"`
+	Expense       []CategoryBreakdownDTO `json:"expense"`
 }
 
 type CategoryBreakdownDTO struct {
@@ -27,13 +28,14 @@ func MapToDashboardSummaryResponse(summary *domain.DashboardSummary) DashboardSu
 	}
 
 	return DashboardSummaryResponse{
-		TotalIncome:  summary.TotalIncome,
-		TotalExpense: summary.TotalExpense,
-		Scope:        summary.Scope,
-		Month:        summary.Month,
-		Year:         summary.Year,
-		Income:       MapToCategoryBreakdownDTO(summary.Income),
-		Expense:      MapToCategoryBreakdownDTO(summary.Expense),
+		TotalIncome:   summary.TotalIncome,
+		TotalExpense:  summary.TotalExpense,
+		TotalTransfer: summary.TotalTransfer,
+		Scope:         summary.Scope,
+		Month:         summary.Month,
+		Year:          summary.Year,
+		Income:        MapToCategoryBreakdownDTO(summary.Income),
+		Expense:       MapToCategoryBreakdownDTO(summary.Expense),
 	}
 }
 

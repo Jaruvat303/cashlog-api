@@ -63,15 +63,15 @@ func TestCreateCategoryHandler(t *testing.T) {
 				uc.On("CreateCategory", mock.Anything, validInput.ToDomainCreateParam()).Return(nil, errors.New("db error"))
 			},
 			expectedStatus: fiber.StatusInternalServerError,
-			expectedBody:   "db error",
+			expectedBody:   "Something went wrong, please try again later.",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			app := fiber.New()
 			mockUC := new(domain.CategoryUsecaseMock)
 			mockLog := logger.NewNopLogger()
+			app := newTestApp(mockLog)
 			tt.setupMock(mockUC)
 
 			h := handler.NewCategoryHandler(mockUC, mockLog)
@@ -151,9 +151,9 @@ func TestUpdateCategoryHandler(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			app := fiber.New()
 			mockUC := new(domain.CategoryUsecaseMock)
 			mockLog := logger.NewNopLogger()
+			app := newTestApp(mockLog)
 			tt.setupMock(mockUC)
 
 			h := handler.NewCategoryHandler(mockUC, mockLog)
@@ -213,9 +213,9 @@ func TestDeleteCategoryHandler(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			app := fiber.New()
 			mockUC := new(domain.CategoryUsecaseMock)
 			mockLog := logger.NewNopLogger()
+			app := newTestApp(mockLog)
 			tt.setupMock(mockUC)
 
 			h := handler.NewCategoryHandler(mockUC, mockLog)
@@ -271,9 +271,9 @@ func TestFetchCategoriesByTypeHandler(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			app := fiber.New()
 			mockUC := new(domain.CategoryUsecaseMock)
 			mockLog := logger.NewNopLogger()
+			app := newTestApp(mockLog)
 			tt.setupMock(mockUC)
 
 			h := handler.NewCategoryHandler(mockUC, mockLog)

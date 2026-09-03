@@ -52,6 +52,21 @@ func NewGlobalErrorHandler(appLogger logger.Logger) fiber.ErrorHandler {
 				errorCode = "INVALID_INPUT_PARAMETERS"
 				clientMessage = err.Error()
 
+			case errors.Is(err, domain.ErrAccountInactive):
+				statusCode = fiber.StatusBadRequest
+				errorCode = "ACCOUNT_INACTIVE"
+				clientMessage = "The referenced account is inactive."
+
+			case errors.Is(err, domain.ErrTransferSameAccount):
+				statusCode = fiber.StatusBadRequest
+				errorCode = "TRANSFER_SAME_ACCOUNT"
+				clientMessage = "from_account_id and to_account_id must be different."
+
+			case errors.Is(err, domain.ErrCategoryNotAllowedForTransfer):
+				statusCode = fiber.StatusBadRequest
+				errorCode = "CATEGORY_NOT_ALLOWED_FOR_TRANSFER"
+				clientMessage = "category_id is not allowed for transfer transactions."
+
 			// 404 Not Found
 			case errors.Is(err, domain.ErrNotFound):
 				statusCode = fiber.StatusNotFound

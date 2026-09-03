@@ -88,6 +88,76 @@ func (h *TransactionHandler) UplaodSlipAndLog(c *fiber.Ctx) error {
 	return response.Success(c, fiber.StatusCreated, "Transaction processed successfully", dtoResult)
 }
 
+// CreateTransaction สำหรับสร้างธุรกรรม income/expense แบบ manual (ไม่ผ่านสลิป)
+// @Summary สร้างธุรกรรม income/expense แบบ manual
+// @Description สร้างธุรกรรม income หรือ expense ด้วยตนเอง โดยต้องระบุ account_id ที่ active อยู่
+// @Tags Transaction
+// @Accept json
+// @Produce json
+// @Param request body dto.CreateTransactionInput true "ข้อมูลสำหรับสร้างธุรกรรม"
+// @Success 201 {object} response.JsonResponse[dto.TransactionResponse] "Transaction created successfully"
+// @Failure 400 {object} dto.ErrorResponseDTO "Bad Request  <br>error_code: INVALID_INPUT_PARAMETERS <br>message: 1. Invalid JSON format. 2. Validation failed for the request data."
+// @Failure 499 {object} dto.ErrorResponseDTO "Client Closed Request  <br>error_code: REQUEST_CANCELED <br>message: The request was canceled by the user"
+// @Failure 500 {object} dto.ErrorResponseDTO "Internal Server Error <br>error_code: INTERNAL_SERVER_ERROR or INTERNAL_DATABASE_ERROR <br>message: Something went wrong, please try again later"
+// @Failure 504 {object} dto.ErrorResponseDTO "Gateway Timeout <br>error_code: DATABASE_TIMEOUT <br>message: The database operation timed out, please try again"
+// @Router /transactions [post]
+func (h *TransactionHandler) CreateTransaction(c *fiber.Ctx) error {
+	ctx := c.UserContext()
+
+	var input dto.CreateTransactionInput
+	if err := c.BodyParser(&input); err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, "Invalid JSON format.")
+	}
+
+	if err := validate.ValidateStruct(&input); err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, "Validation failed for the request data.")
+	}
+
+	result, err := h.txUsecase.CreateTransaction(ctx, input.ToDomainCreateParam())
+	if err != nil {
+		return err
+	}
+
+	resultDTO := dto.MapToTransactionResponse(result)
+
+	return response.Success(c, fiber.StatusCreated, "Transaction created successfully", resultDTO)
+}
+
+// CreateTransfer สำหรับสร้างธุรกรรม transfer แบบ manual ระหว่าง 2 บัญชี
+// @Summary สร้างธุรกรรม transfer แบบ manual
+// @Description สร้างธุรกรรม transfer ระหว่าง 2 บัญชีด้วยตนเอง โดย from_account_id ต้องไม่เท่ากับ to_account_id และทั้งคู่ต้อง active อยู่
+// @Tags Transaction
+// @Accept json
+// @Produce json
+// @Param request body dto.CreateTransferInput true "ข้อมูลสำหรับสร้างธุรกรรม transfer"
+// @Success 201 {object} response.JsonResponse[dto.TransactionResponse] "Transfer created successfully"
+// @Failure 400 {object} dto.ErrorResponseDTO "Bad Request  <br>error_code: INVALID_INPUT_PARAMETERS <br>message: 1. Invalid JSON format. 2. Validation failed for the request data. 3. from_account_id เท่ากับ to_account_id. 4. category_id ถูกส่งมาสำหรับ transfer"
+// @Failure 499 {object} dto.ErrorResponseDTO "Client Closed Request  <br>error_code: REQUEST_CANCELED <br>message: The request was canceled by the user"
+// @Failure 500 {object} dto.ErrorResponseDTO "Internal Server Error <br>error_code: INTERNAL_SERVER_ERROR or INTERNAL_DATABASE_ERROR <br>message: Something went wrong, please try again later"
+// @Failure 504 {object} dto.ErrorResponseDTO "Gateway Timeout <br>error_code: DATABASE_TIMEOUT <br>message: The database operation timed out, please try again"
+// @Router /transactions/transfer [post]
+func (h *TransactionHandler) CreateTransfer(c *fiber.Ctx) error {
+	ctx := c.UserContext()
+
+	var input dto.CreateTransferInput
+	if err := c.BodyParser(&input); err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, "Invalid JSON format.")
+	}
+
+	if err := validate.ValidateStruct(&input); err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, "Validation failed for the request data.")
+	}
+
+	result, err := h.txUsecase.CreateTransfer(ctx, input.ToDomainCreateParam())
+	if err != nil {
+		return err
+	}
+
+	resultDTO := dto.MapToTransactionResponse(result)
+
+	return response.Success(c, fiber.StatusCreated, "Transfer created successfully", resultDTO)
+}
+
 // GetDashboardSummary ตอบกลับข้อมูลสรุปรายรับ-รายจ่ายประจำเดือนหรือรายปี
 // @Summary ดึงข้อมูลสรุปรายรับ-รายจ่ายประจำเดือนหรือรายปี
 // @Description ดึงข้อมูลสรุปรายรับ-รายจ่ายประจำเดือนหรือรายปี โดยสามารถระบุช่วงเวลาได้ผ่าน Query Parameters

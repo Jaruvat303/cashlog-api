@@ -60,6 +60,7 @@ func InitPostgresDB(ctx context.Context, cfg *config.Config, appLogger logger.Lo
 	appLogger.Info("⏳ Running Database Auto Migration...")
 	err = db.AutoMigrate(
 		&domain.Category{},
+		&domain.Account{},
 		&domain.Transaction{},
 	) // ปรับให้ตรงกับชื่อ Struct ตาราง
 	if err != nil {
@@ -84,6 +85,22 @@ func SeedCategories(ctx context.Context, db *gorm.DB, appLogger logger.Logger) e
 	}
 
 	appLogger.Info("Successfully seeded categories data!")
+	return nil
+
+}
+
+//go:embed init_accounts.sql
+var initAccountsSQL string
+
+// SeedAccounts ทำหน้าที่อ่านไฟล์ SQL และ Execute เข้า Database
+func SeedAccounts(ctx context.Context, db *gorm.DB, appLogger logger.Logger) error {
+
+	// รันคำสั่ง SQL ผ่าน GORM
+	if err := db.Exec(initAccountsSQL).Error; err != nil {
+		return err
+	}
+
+	appLogger.Info("Successfully seeded accounts data!")
 	return nil
 
 }
