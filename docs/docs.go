@@ -900,13 +900,9 @@ const docTemplate = `{
                     "type": "string",
                     "example": "bank"
                 },
-                "color_hex": {
+                "bank_icon": {
                     "type": "string",
-                    "example": "#4F46E5"
-                },
-                "icon_key": {
-                    "type": "string",
-                    "example": "bank"
+                    "example": "scb"
                 },
                 "id": {
                     "type": "integer",
@@ -986,6 +982,7 @@ const docTemplate = `{
             "type": "object",
             "required": [
                 "account_type",
+                "bank_icon",
                 "matching_keywords",
                 "name"
             ],
@@ -1000,15 +997,10 @@ const docTemplate = `{
                     ],
                     "example": "bank"
                 },
-                "color_hex": {
+                "bank_icon": {
                     "type": "string",
-                    "maxLength": 10,
-                    "example": "#4F46E5"
-                },
-                "icon_key": {
-                    "type": "string",
-                    "maxLength": 50,
-                    "example": "bank"
+                    "maxLength": 100,
+                    "example": "scb"
                 },
                 "matching_keywords": {
                     "type": "array",
@@ -1286,15 +1278,11 @@ const docTemplate = `{
                     ],
                     "example": "bank"
                 },
-                "color_hex": {
+                "bank_icon": {
                     "type": "string",
-                    "maxLength": 10,
-                    "example": "#4F46E5"
-                },
-                "icon_key": {
-                    "type": "string",
-                    "maxLength": 50,
-                    "example": "bank"
+                    "maxLength": 100,
+                    "minLength": 1,
+                    "example": "scb"
                 },
                 "is_active": {
                     "type": "boolean",

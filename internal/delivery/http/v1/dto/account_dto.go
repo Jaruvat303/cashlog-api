@@ -9,8 +9,7 @@ type AccountResponse struct {
 	AccountType      string   `json:"account_type" example:"bank"`
 	OpeningBalance   float64  `json:"opening_balance" example:"1000"`
 	MatchingKeywords []string `json:"matching_keywords" example:"SCB"`
-	IconKey          string   `json:"icon_key" example:"bank"`
-	ColorHex         string   `json:"color_hex" example:"#4F46E5"`
+	BankIcon         string   `json:"bank_icon" example:"scb"`
 	IsActive         bool     `json:"is_active" example:"true"`
 }
 
@@ -20,8 +19,7 @@ type CreateAccountInput struct {
 	AccountType      string   `json:"account_type" validate:"required,oneof=cash bank investment ewallet" example:"bank"`
 	OpeningBalance   float64  `json:"opening_balance" validate:"gte=0" example:"1000"`
 	MatchingKeywords []string `json:"matching_keywords" validate:"omitempty,dive,required" example:"SCB"`
-	IconKey          string   `json:"icon_key" validate:"omitempty,max=50" example:"bank"`
-	ColorHex         string   `json:"color_hex" validate:"omitempty,max=10" example:"#4F46E5"`
+	BankIcon         string   `json:"bank_icon" validate:"required,max=100" example:"scb"`
 }
 
 // UpdateAccountInput - ข้อมูลนำเข้าสำหรับอัปเดตบัญชี (Request Body)
@@ -29,8 +27,7 @@ type UpdateAccountInput struct {
 	Name             *string   `json:"name" validate:"omitempty,min=1,max=100" example:"SCB"`
 	AccountType      *string   `json:"account_type" validate:"omitempty,oneof=cash bank investment ewallet" example:"bank"`
 	MatchingKeywords *[]string `json:"matching_keywords" validate:"omitempty,dive,required" example:"SCB"`
-	IconKey          *string   `json:"icon_key" validate:"omitempty,max=50" example:"bank"`
-	ColorHex         *string   `json:"color_hex" validate:"omitempty,max=10" example:"#4F46E5"`
+	BankIcon         *string   `json:"bank_icon" validate:"omitempty,min=1,max=100" example:"scb"`
 	IsActive         *bool     `json:"is_active" example:"true"`
 }
 
@@ -41,8 +38,7 @@ func (c *CreateAccountInput) ToDomainCreateParam() domain.CreateAccountParam {
 		AccountType:      c.AccountType,
 		OpeningBalance:   c.OpeningBalance,
 		MatchingKeywords: c.MatchingKeywords,
-		IconKey:          c.IconKey,
-		ColorHex:         c.ColorHex,
+		BankIcon:         c.BankIcon,
 	}
 }
 
@@ -62,13 +58,7 @@ func (u *UpdateAccountInput) ToDomainUpdateParam() domain.UpdateAccountParam {
 		param.MatchingKeywords = *u.MatchingKeywords
 	}
 
-	if u.IconKey != nil {
-		param.IconKey = *u.IconKey
-	}
-
-	if u.ColorHex != nil {
-		param.ColorHex = *u.ColorHex
-	}
+	param.BankIcon = u.BankIcon
 
 	if u.IsActive != nil {
 		param.IsActive = u.IsActive
@@ -84,8 +74,7 @@ func MapToAccountResponse(a *domain.Account) AccountResponse {
 		AccountType:      a.AccountType,
 		OpeningBalance:   a.OpeningBalance,
 		MatchingKeywords: []string(a.MatchingKeywords),
-		IconKey:          a.IconKey,
-		ColorHex:         a.ColorHex,
+		BankIcon:         a.BankIcon,
 		IsActive:         a.IsActive,
 	}
 }

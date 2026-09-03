@@ -5,11 +5,8 @@ definitions:
       account_type:
         example: bank
         type: string
-      color_hex:
-        example: '#4F46E5'
-        type: string
-      icon_key:
-        example: bank
+      bank_icon:
+        example: scb
         type: string
       id:
         example: 1
@@ -73,13 +70,9 @@ definitions:
         - ewallet
         example: bank
         type: string
-      color_hex:
-        example: '#4F46E5'
-        maxLength: 10
-        type: string
-      icon_key:
-        example: bank
-        maxLength: 50
+      bank_icon:
+        example: scb
+        maxLength: 100
         type: string
       matching_keywords:
         example:
@@ -98,6 +91,7 @@ definitions:
         type: number
     required:
     - account_type
+    - bank_icon
     - matching_keywords
     - name
     type: object
@@ -281,13 +275,10 @@ definitions:
         - ewallet
         example: bank
         type: string
-      color_hex:
-        example: '#4F46E5'
-        maxLength: 10
-        type: string
-      icon_key:
-        example: bank
-        maxLength: 50
+      bank_icon:
+        example: scb
+        maxLength: 100
+        minLength: 1
         type: string
       is_active:
         example: true
