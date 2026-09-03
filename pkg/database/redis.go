@@ -2,7 +2,6 @@ package database
 
 import (
 	"context"
-	"crypto/tls"
 	"time"
 
 	"github.com/Jaruvat303/cashlog/cmd/config"
@@ -16,12 +15,15 @@ func InitRedisDB(ctx context.Context, cfg *config.Config, appLogger logger.Logge
 
 	opt, err := redis.ParseURL(cfg.RedisURL)
 	if err != nil {
-		appLogger.Fatal("❌ Failed to parse Redis URL", zap.Error(err))
+		// 🚨 ไม่สั่ง Fatal ให้แอปตาย หากตั้งค่า Redis URL ผิดหรือไม่ได้ตั้งค่าไว้ (ตามหลัก Graceful Degradation)
+		appLogger.Warn("⚠️ Failed to parse Redis URL, falling back to default connection options", zap.Error(err))
+		opt = &redis.Options{}
 	}
 
-	// ตั้งค่า TLS สำหรับการเชื่อมต่อ Redis ผ่าน SSL/TLS
-	opt.TLSConfig = &tls.Config{
-		InsecureSkipVerify: true, // ปิดการตรวจสอบใบรับรอง (ไม่แนะนำสำหรับ Production)
+	// ตั้งค่า TLS สำหรับการเชื่อมต่อ Redis ผ่าน SSL/TLS เฉพาะกรณีที่ URL ใช้ scheme "rediss://"
+	// (ParseURL จะตั้งค่า opt.TLSConfig ให้ไม่เป็น nil เฉพาะตอนที่ URL เป็น rediss:// เท่านั้น)
+	if opt.TLSConfig != nil {
+		opt.TLSConfig.InsecureSkipVerify = true // ปิดการตรวจสอบใบรับรอง (ไม่แนะนำสำหรับ Production)
 	}
 
 	// 🌟 1. เพิ่มการตั้งค่า Connection Pool เพื่อปรับปรุงประสิทธิภาพและความเสถียรของการเชื่อมต่อ

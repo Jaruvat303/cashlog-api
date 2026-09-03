@@ -69,7 +69,7 @@ func TestCreateAccount(t *testing.T) {
 
 			// Assert
 			if tt.expectedError != nil {
-				assert.Error(t, err, tt.expectedError)
+				assert.ErrorIs(t, err, tt.expectedError)
 			} else {
 				assert.NoError(t, err)
 				assert.NotNil(t, account)
@@ -112,7 +112,7 @@ func TestDeleteAccount(t *testing.T) {
 			setupMock: func(repo *domain.AccountRepositoryMock) {
 				repo.On("GetByID", mock.Anything, uint(mockAcc.ID)).Return(nil, nil)
 			},
-			expectedError: nil,
+			expectedError: domain.ErrNotFound,
 		},
 		{
 			name:      "3. DB Error - ฐานข้อมูลขัดข้อง",
@@ -139,7 +139,7 @@ func TestDeleteAccount(t *testing.T) {
 
 			// Assert
 			if tt.expectedError != nil {
-				assert.Error(t, err, tt.expectedError)
+				assert.ErrorIs(t, err, tt.expectedError)
 			} else {
 				assert.NoError(t, err)
 			}
@@ -211,7 +211,7 @@ func TestFetchActiveAccounts(t *testing.T) {
 
 			// Assert
 			if tt.expectedError != nil {
-				assert.Error(t, err, tt.expectedError)
+				assert.ErrorIs(t, err, tt.expectedError)
 				assert.Nil(t, result)
 			} else {
 				assert.NoError(t, err)
@@ -256,8 +256,17 @@ func TestUpdateAccount(t *testing.T) {
 			accountID: uint(mockAcc.ID),
 			input:     mockInput,
 			setupMock: func(repo *domain.AccountRepositoryMock) {
-				repo.On("GetByID", mock.Anything, uint(mockAcc.ID)).Return(mockAcc, nil)
-				repo.On("Update", mock.Anything, mockAcc, uint(mockAcc.ID)).Return(nil)
+				// ส่งคืน "สำเนา" ของ mockAcc แทนตัวจริง เพื่อไม่ให้ Update จับคู่กับ Pointer เดิมแบบไม่มีความหมาย
+				accCopy := *mockAcc
+				repo.On("GetByID", mock.Anything, uint(mockAcc.ID)).Return(&accCopy, nil)
+				repo.On("Update", mock.Anything, mock.MatchedBy(func(acc *domain.Account) bool {
+					return acc.Name == mockInput.Name &&
+						acc.AccountType == mockInput.AccountType &&
+						acc.IconKey == mockInput.IconKey &&
+						acc.ColorHex == mockInput.ColorHex &&
+						acc.IsActive == *mockInput.IsActive &&
+						assert.ObjectsAreEqual(domain.StringSlice(mockInput.MatchingKeywords), acc.MatchingKeywords)
+				}), uint(mockAcc.ID)).Return(nil)
 			},
 			expectedError: nil,
 		},
@@ -296,7 +305,7 @@ func TestUpdateAccount(t *testing.T) {
 
 			// Assert
 			if tt.expectedError != nil {
-				assert.Error(t, err, tt.expectedError)
+				assert.ErrorIs(t, err, tt.expectedError)
 				assert.Nil(t, result)
 			} else {
 				assert.NoError(t, err)

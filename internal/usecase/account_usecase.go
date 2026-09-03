@@ -36,11 +36,12 @@ func (a *accountUsecase) DeleteAccount(ctx context.Context, id uint) error {
 	if err != nil {
 		return err
 	}
+	if acc == nil {
+		return domain.ErrNotFound
+	}
 
-	if acc != nil {
-		if err := a.accountRepo.Delete(ctx, id); err != nil {
-			return err
-		}
+	if err := a.accountRepo.Delete(ctx, id); err != nil {
+		return err
 	}
 
 	return nil

@@ -7,12 +7,12 @@ services:
       context: .
       dockerfile: Dockerfile
     ports:
-      - "8080:8080" 
+      - "8080:8080"
     # ดึงค่าทุกอย่างจากไฟล์ .env ในเครื่องโดยตรง
     env_file:
       - .env
     environment:
-      - REDIS_HOST=redis_cache:6379
+      - REDIS_URL=redis://redis_cache:6379
       - GODEBUG=netdns=go
       - GO_NET_PREFER_IPV4=1
       - GOOGLE_APPLICATION_CREDENTIALS=/app/google-credentials.json
