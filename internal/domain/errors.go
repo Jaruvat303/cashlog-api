@@ -19,4 +19,7 @@ var (
 	ErrTransferSameAccount           = errors.New("transfer_same_account")             // from_account_id == to_account_id
 	ErrCategoryNotAllowedForTransfer = errors.New("category_not_allowed_for_transfer") // ส่ง category_id มาตอนสร้าง transfer
 	ErrCategoryTypeMismatch          = errors.New("category_type_mismatch")            // Category.Type ไม่ตรงกับ transaction_type
+
+	ErrTransferAccountsRequired     = errors.New("transfer_accounts_required")      // แปลง transaction_type เป็น transfer ต้องส่ง from_account_id และ to_account_id มาพร้อมกัน (Ticket 04)
+	ErrAccountRequiredForConversion = errors.New("account_required_for_conversion") // แปลง transaction_type เป็น income/expense ต้องมี account_id ที่ใช้ได้ (ใหม่ หรือของเดิมที่ compatible) (Ticket 04)
 )

@@ -36,8 +36,10 @@ type TransactionResponse struct {
 //
 // AccountID ใช้ได้เฉพาะธุรกรรม income/expense — สำหรับ "เติม" account_id ที่ BR-2 auto-scan match ไม่เจอ (nil)
 // FromAccountID/ToAccountID ใช้ได้เฉพาะธุรกรรม transfer — สำหรับ "เติม" to_account_id ที่ BR-2 ไม่พยายาม match ตาม Decision #23
+// TransactionType ใช้แปลงประเภทธุรกรรม (income/expense/transfer) ในคำขอเดียวกัน — ดู ADR 0001 สำหรับกฎ field ที่ต้องมาพร้อมกันและ field ที่ถูกเคลียร์อัตโนมัติ (Ticket 04)
 type UpdateTransactionInput struct {
 	Amount          *float64   `json:"amount" validate:"omitempty,gt=0" example:"150.50"`
+	TransactionType *string    `json:"transaction_type" validate:"omitempty,oneof=income expense transfer" example:"transfer"`
 	Note            *string    `json:"note" validate:"omitempty,max=255" example:"ค่ากาแฟอเมริกาโน่เย็น"`
 	CategoryID      *int64     `json:"category_id" validate:"omitempty,gt=0" example:"2"`
 	AccountID       *int64     `json:"account_id" validate:"omitempty,gt=0" example:"1"`
@@ -99,6 +101,10 @@ func (u *UpdateTransactionInput) ToDomainUpdateParam() domain.UpdateTransactionP
 
 	if u.Amount != nil {
 		param.Amount = u.Amount
+	}
+
+	if u.TransactionType != nil {
+		param.TransactionType = u.TransactionType
 	}
 
 	if u.Note != nil {
