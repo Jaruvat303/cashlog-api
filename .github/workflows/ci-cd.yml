@@ -109,7 +109,6 @@ jobs:
             DB_CONN_MAX_LIFETIME=30
             GOOGLE_CLOUD_PROJECT=cashlog-api
             MODEL_NAME=gemini-3.5-flash-lite
-            OWNER_NAME_ALIASES=["จารุวัฒน์","สีหิน","Jaruvat","Seehin"]
 
           # สลับชื่อกุญแจในการไขความลับบน GCP ตามค่าที่แมปไว้ใน GitHub Secrets ของแต่ละฝั่ง
           secrets: |
@@ -117,6 +116,7 @@ jobs:
             REDIS_URL=${{ vars.GCP_REDIS_SECRET_NAME }}:latest
             GEMINI_API_KEY=${{ vars.GCP_GEMINI_SECRET_NAME }}:latest
             API_KEY=${{ vars.GCP_API_KEY_SECRET_NAME }}:latest
+            OWNER_NAME_ALIASES=${{ vars.GCP_OWNER_ALIASES_SECRET_NAME }}:latest
 
       # 🎯 พ่น URL ของ API ตัวจริงออกมาแสดงผลบนหน้าจอเมื่อ Deploy สำเร็จ
       - name: 'Show Production URL Output'
