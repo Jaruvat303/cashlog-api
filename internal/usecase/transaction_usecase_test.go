@@ -576,6 +576,271 @@ func TestUpdateTransaction(t *testing.T) {
 	}
 }
 
+func TestUpdateTransaction_TransactionTypeConversion(t *testing.T) {
+	activeAccount := func(id int64) *domain.Account {
+		return &domain.Account{ID: id, Name: "บัญชีทดสอบ", IsActive: true}
+	}
+
+	tests := []struct {
+		name          string
+		id            uint
+		input         domain.UpdateTransactionParam
+		setupMock     func(repo *domain.TransactionRepositoryMock, cache *domain.TransactionCacheRepositoryMock, account *domain.AccountRepositoryMock, category *domain.CategoryRepositoryMock)
+		expectedError bool
+		expectedErrIs error
+	}{
+		{
+			name: "1. income -> expense: ใช้ account_id เดิม, ต้องส่ง category_id ใหม่ให้ตรง type",
+			id:   1,
+			input: domain.UpdateTransactionParam{
+				TransactionType: pkg.PTR(domain.TransactionTypeExpense),
+				CategoryID:      pkg.PTR(int64(200)),
+			},
+			setupMock: func(repo *domain.TransactionRepositoryMock, cache *domain.TransactionCacheRepositoryMock, account *domain.AccountRepositoryMock, category *domain.CategoryRepositoryMock) {
+				repo.On("GetByID", mock.Anything, uint(1)).Return(&domain.Transaction{
+					ID:              1,
+					TransactionType: domain.TransactionTypeIncome,
+					AccountID:       pkg.PTR(int64(10)),
+					CategoryID:      pkg.PTR(int64(100)),
+				}, nil)
+				category.On("GetByID", mock.Anything, uint(200)).Return(&domain.Category{ID: 200, Type: domain.TransactionTypeExpense}, nil)
+				repo.On("Update", mock.Anything, mock.MatchedBy(func(tx *domain.Transaction) bool {
+					return tx.TransactionType == domain.TransactionTypeExpense &&
+						tx.AccountID != nil && *tx.AccountID == 10 &&
+						tx.CategoryID != nil && *tx.CategoryID == 200 &&
+						tx.FromAccountID == nil && tx.ToAccountID == nil
+				})).Return(nil)
+				cache.On("InvalidateCache", mock.Anything, mock.Anything).Return(nil)
+			},
+			expectedError: false,
+		},
+		{
+			name: "2. income -> transfer: ต้องส่ง from_account_id/to_account_id มาพร้อมกัน, เคลียร์ account_id/category_id",
+			id:   2,
+			input: domain.UpdateTransactionParam{
+				TransactionType: pkg.PTR(domain.TransactionTypeTransfer),
+				FromAccountID:   pkg.PTR(int64(20)),
+				ToAccountID:     pkg.PTR(int64(21)),
+			},
+			setupMock: func(repo *domain.TransactionRepositoryMock, cache *domain.TransactionCacheRepositoryMock, account *domain.AccountRepositoryMock, category *domain.CategoryRepositoryMock) {
+				repo.On("GetByID", mock.Anything, uint(2)).Return(&domain.Transaction{
+					ID:              2,
+					TransactionType: domain.TransactionTypeIncome,
+					AccountID:       pkg.PTR(int64(10)),
+					CategoryID:      pkg.PTR(int64(100)),
+				}, nil)
+				account.On("GetByID", mock.Anything, uint(20)).Return(activeAccount(20), nil)
+				account.On("GetByID", mock.Anything, uint(21)).Return(activeAccount(21), nil)
+				repo.On("Update", mock.Anything, mock.MatchedBy(func(tx *domain.Transaction) bool {
+					return tx.TransactionType == domain.TransactionTypeTransfer &&
+						tx.AccountID == nil && tx.CategoryID == nil &&
+						tx.FromAccountID != nil && *tx.FromAccountID == 20 &&
+						tx.ToAccountID != nil && *tx.ToAccountID == 21
+				})).Return(nil)
+				cache.On("InvalidateCache", mock.Anything, mock.Anything).Return(nil)
+			},
+			expectedError: false,
+		},
+		{
+			name: "3. expense -> income: account_id เดิม compatible, ไม่ต้องส่งใหม่",
+			id:   3,
+			input: domain.UpdateTransactionParam{
+				TransactionType: pkg.PTR(domain.TransactionTypeIncome),
+				CategoryID:      pkg.PTR(int64(100)),
+			},
+			setupMock: func(repo *domain.TransactionRepositoryMock, cache *domain.TransactionCacheRepositoryMock, account *domain.AccountRepositoryMock, category *domain.CategoryRepositoryMock) {
+				repo.On("GetByID", mock.Anything, uint(3)).Return(&domain.Transaction{
+					ID:              3,
+					TransactionType: domain.TransactionTypeExpense,
+					AccountID:       pkg.PTR(int64(11)),
+					CategoryID:      pkg.PTR(int64(200)),
+				}, nil)
+				category.On("GetByID", mock.Anything, uint(100)).Return(&domain.Category{ID: 100, Type: domain.TransactionTypeIncome}, nil)
+				repo.On("Update", mock.Anything, mock.MatchedBy(func(tx *domain.Transaction) bool {
+					return tx.TransactionType == domain.TransactionTypeIncome &&
+						tx.AccountID != nil && *tx.AccountID == 11 &&
+						tx.CategoryID != nil && *tx.CategoryID == 100 &&
+						tx.FromAccountID == nil && tx.ToAccountID == nil
+				})).Return(nil)
+				cache.On("InvalidateCache", mock.Anything, mock.Anything).Return(nil)
+			},
+			expectedError: false,
+		},
+		{
+			name: "4. expense -> transfer: เคลียร์ account_id/category_id, ตั้ง from/to ใหม่",
+			id:   4,
+			input: domain.UpdateTransactionParam{
+				TransactionType: pkg.PTR(domain.TransactionTypeTransfer),
+				FromAccountID:   pkg.PTR(int64(22)),
+				ToAccountID:     pkg.PTR(int64(23)),
+			},
+			setupMock: func(repo *domain.TransactionRepositoryMock, cache *domain.TransactionCacheRepositoryMock, account *domain.AccountRepositoryMock, category *domain.CategoryRepositoryMock) {
+				repo.On("GetByID", mock.Anything, uint(4)).Return(&domain.Transaction{
+					ID:              4,
+					TransactionType: domain.TransactionTypeExpense,
+					AccountID:       pkg.PTR(int64(12)),
+					CategoryID:      pkg.PTR(int64(200)),
+				}, nil)
+				account.On("GetByID", mock.Anything, uint(22)).Return(activeAccount(22), nil)
+				account.On("GetByID", mock.Anything, uint(23)).Return(activeAccount(23), nil)
+				repo.On("Update", mock.Anything, mock.MatchedBy(func(tx *domain.Transaction) bool {
+					return tx.TransactionType == domain.TransactionTypeTransfer &&
+						tx.AccountID == nil && tx.CategoryID == nil &&
+						tx.FromAccountID != nil && *tx.FromAccountID == 22 &&
+						tx.ToAccountID != nil && *tx.ToAccountID == 23
+				})).Return(nil)
+				cache.On("InvalidateCache", mock.Anything, mock.Anything).Return(nil)
+			},
+			expectedError: false,
+		},
+		{
+			name: "5. transfer -> income: ต้องส่ง account_id ใหม่มาด้วย เพราะ transfer ไม่เคยมี account_id",
+			id:   5,
+			input: domain.UpdateTransactionParam{
+				TransactionType: pkg.PTR(domain.TransactionTypeIncome),
+				AccountID:       pkg.PTR(int64(13)),
+			},
+			setupMock: func(repo *domain.TransactionRepositoryMock, cache *domain.TransactionCacheRepositoryMock, account *domain.AccountRepositoryMock, category *domain.CategoryRepositoryMock) {
+				repo.On("GetByID", mock.Anything, uint(5)).Return(&domain.Transaction{
+					ID:              5,
+					TransactionType: domain.TransactionTypeTransfer,
+					FromAccountID:   pkg.PTR(int64(30)),
+					ToAccountID:     pkg.PTR(int64(31)),
+				}, nil)
+				account.On("GetByID", mock.Anything, uint(13)).Return(activeAccount(13), nil)
+				repo.On("Update", mock.Anything, mock.MatchedBy(func(tx *domain.Transaction) bool {
+					return tx.TransactionType == domain.TransactionTypeIncome &&
+						tx.AccountID != nil && *tx.AccountID == 13 &&
+						tx.CategoryID == nil &&
+						tx.FromAccountID == nil && tx.ToAccountID == nil
+				})).Return(nil)
+				cache.On("InvalidateCache", mock.Anything, mock.Anything).Return(nil)
+			},
+			expectedError: false,
+		},
+		{
+			name: "6. transfer -> expense: ต้องส่ง account_id ใหม่มาด้วย, category_id ใหม่ต้องตรง type",
+			id:   6,
+			input: domain.UpdateTransactionParam{
+				TransactionType: pkg.PTR(domain.TransactionTypeExpense),
+				AccountID:       pkg.PTR(int64(14)),
+				CategoryID:      pkg.PTR(int64(200)),
+			},
+			setupMock: func(repo *domain.TransactionRepositoryMock, cache *domain.TransactionCacheRepositoryMock, account *domain.AccountRepositoryMock, category *domain.CategoryRepositoryMock) {
+				repo.On("GetByID", mock.Anything, uint(6)).Return(&domain.Transaction{
+					ID:              6,
+					TransactionType: domain.TransactionTypeTransfer,
+					FromAccountID:   pkg.PTR(int64(32)),
+					ToAccountID:     pkg.PTR(int64(33)),
+				}, nil)
+				account.On("GetByID", mock.Anything, uint(14)).Return(activeAccount(14), nil)
+				category.On("GetByID", mock.Anything, uint(200)).Return(&domain.Category{ID: 200, Type: domain.TransactionTypeExpense}, nil)
+				repo.On("Update", mock.Anything, mock.MatchedBy(func(tx *domain.Transaction) bool {
+					return tx.TransactionType == domain.TransactionTypeExpense &&
+						tx.AccountID != nil && *tx.AccountID == 14 &&
+						tx.CategoryID != nil && *tx.CategoryID == 200 &&
+						tx.FromAccountID == nil && tx.ToAccountID == nil
+				})).Return(nil)
+				cache.On("InvalidateCache", mock.Anything, mock.Anything).Return(nil)
+			},
+			expectedError: false,
+		},
+		{
+			name: "7. Rejected - แปลงเป็น transfer แต่ส่ง to_account_id มาไม่ครบ",
+			id:   7,
+			input: domain.UpdateTransactionParam{
+				TransactionType: pkg.PTR(domain.TransactionTypeTransfer),
+				FromAccountID:   pkg.PTR(int64(40)),
+			},
+			setupMock: func(repo *domain.TransactionRepositoryMock, cache *domain.TransactionCacheRepositoryMock, account *domain.AccountRepositoryMock, category *domain.CategoryRepositoryMock) {
+				repo.On("GetByID", mock.Anything, uint(7)).Return(&domain.Transaction{
+					ID:              7,
+					TransactionType: domain.TransactionTypeExpense,
+					AccountID:       pkg.PTR(int64(15)),
+				}, nil)
+				// ต้อง reject ก่อนแตะ account/category repo หรือ repo.Update ใดๆ ทั้งสิ้น
+			},
+			expectedError: true,
+			expectedErrIs: domain.ErrTransferAccountsRequired,
+		},
+		{
+			name: "8. Rejected - แปลงเป็น income แต่ไม่มี account_id ที่ใช้ได้ (มาจาก transfer, ไม่ส่งใหม่)",
+			id:   8,
+			input: domain.UpdateTransactionParam{
+				TransactionType: pkg.PTR(domain.TransactionTypeIncome),
+			},
+			setupMock: func(repo *domain.TransactionRepositoryMock, cache *domain.TransactionCacheRepositoryMock, account *domain.AccountRepositoryMock, category *domain.CategoryRepositoryMock) {
+				repo.On("GetByID", mock.Anything, uint(8)).Return(&domain.Transaction{
+					ID:              8,
+					TransactionType: domain.TransactionTypeTransfer,
+					FromAccountID:   pkg.PTR(int64(41)),
+					ToAccountID:     pkg.PTR(int64(42)),
+				}, nil)
+			},
+			expectedError: true,
+			expectedErrIs: domain.ErrAccountRequiredForConversion,
+		},
+		{
+			name: "9. Rejected - category_id ที่ส่งมาพร้อมการแปลง type ไม่ตรงกับ type หลังแปลง",
+			id:   9,
+			input: domain.UpdateTransactionParam{
+				TransactionType: pkg.PTR(domain.TransactionTypeIncome),
+				CategoryID:      pkg.PTR(int64(200)), // 200 เป็น category ประเภท expense
+			},
+			setupMock: func(repo *domain.TransactionRepositoryMock, cache *domain.TransactionCacheRepositoryMock, account *domain.AccountRepositoryMock, category *domain.CategoryRepositoryMock) {
+				repo.On("GetByID", mock.Anything, uint(9)).Return(&domain.Transaction{
+					ID:              9,
+					TransactionType: domain.TransactionTypeExpense,
+					AccountID:       pkg.PTR(int64(16)),
+					CategoryID:      pkg.PTR(int64(200)),
+				}, nil)
+				category.On("GetByID", mock.Anything, uint(200)).Return(&domain.Category{ID: 200, Type: domain.TransactionTypeExpense}, nil)
+				// repo.Update ต้องไม่ถูกเรียก
+			},
+			expectedError: true,
+			expectedErrIs: domain.ErrCategoryTypeMismatch,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			mockRepo := new(domain.TransactionRepositoryMock)
+			mockCache := new(domain.TransactionCacheRepositoryMock)
+			mockGemini := new(domain.GeminiSlipRepositoryMock)
+			mockAccount := new(domain.AccountRepositoryMock)
+			mockCategory := new(domain.CategoryRepositoryMock)
+			mockLogger := logger.NewNopLogger()
+
+			ctx := context.Background()
+
+			tt.setupMock(mockRepo, mockCache, mockAccount, mockCategory)
+
+			uc := usecase.NewTransactionUsecase(mockRepo, mockCache, mockGemini, mockAccount, mockCategory, nil, mockLogger)
+
+			// Act
+			result, err := uc.UpdateTransaction(ctx, tt.id, tt.input)
+
+			// Assert
+			if tt.expectedError {
+				assert.Nil(t, result)
+				assert.Error(t, err)
+				if tt.expectedErrIs != nil {
+					assert.ErrorIs(t, err, tt.expectedErrIs)
+				}
+			} else {
+				assert.NoError(t, err)
+				assert.NotNil(t, result)
+			}
+
+			mockRepo.AssertExpectations(t)
+			mockCache.AssertExpectations(t)
+			mockAccount.AssertExpectations(t)
+			mockCategory.AssertExpectations(t)
+		})
+	}
+}
+
 func TestSyncTransaction(t *testing.T) {
 	ctx := context.Background()
 	fakeBytes := []byte("fake-image-data")

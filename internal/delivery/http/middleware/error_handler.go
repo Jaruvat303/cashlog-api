@@ -67,6 +67,16 @@ func NewGlobalErrorHandler(appLogger logger.Logger) fiber.ErrorHandler {
 				errorCode = "CATEGORY_NOT_ALLOWED_FOR_TRANSFER"
 				clientMessage = "category_id is not allowed for transfer transactions."
 
+			case errors.Is(err, domain.ErrTransferAccountsRequired):
+				statusCode = fiber.StatusBadRequest
+				errorCode = "TRANSFER_ACCOUNTS_REQUIRED"
+				clientMessage = "Converting to transfer requires both from_account_id and to_account_id in the same request."
+
+			case errors.Is(err, domain.ErrAccountRequiredForConversion):
+				statusCode = fiber.StatusBadRequest
+				errorCode = "ACCOUNT_REQUIRED_FOR_CONVERSION"
+				clientMessage = "Converting to income/expense requires a usable account_id (new or already compatible)."
+
 			// 404 Not Found
 			case errors.Is(err, domain.ErrNotFound):
 				statusCode = fiber.StatusNotFound

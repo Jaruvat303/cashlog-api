@@ -91,6 +91,38 @@ func (t *transactionUsecase) UpdateTransaction(ctx context.Context, id uint, inp
 	// บันทึกค่าเวลาเดือนและปีเก่าไว้ก่อนนำไปคำนวณ เพื่อใช้ถล่มแคชกรณีผู้ใช้เปลี่ยนวันที่ข้ามเดือน
 	oldYear, oldMonth := tx.TransactionDate.Year(), tx.TransactionDate.Month()
 
+	// จัดการ transaction_type conversion ก่อน field อื่นๆ ทั้งหมด (Ticket 04, ADR 0001)
+	// field ด้านล่างเช็คความเข้ากันได้กับ tx.TransactionType อยู่แล้ว — ถ้าอัป tx.TransactionType เป็น type ใหม่ตรงนี้ก่อน
+	// field application block เดิมของ category_id/account_id/from_account_id/to_account_id จะเช็คกับ type ใหม่ให้เองโดยไม่ต้องเขียนซ้ำ
+	if input.TransactionType != nil && *input.TransactionType != tx.TransactionType {
+		newType := *input.TransactionType
+
+		switch newType {
+		case domain.TransactionTypeTransfer:
+			// แปลงเป็น transfer ต้องส่ง from_account_id และ to_account_id มาพร้อมกันในคำขอเดียวกันเสมอ — reject ทันที ไม่ persist อะไรเลย
+			if input.FromAccountID == nil || input.ToAccountID == nil {
+				return nil, domain.ErrTransferAccountsRequired
+			}
+			// field ที่ไม่เข้ากับ transfer ถูกเคลียร์อัตโนมัติ
+			tx.AccountID = nil
+			tx.CategoryID = nil
+
+		case domain.TransactionTypeIncome, domain.TransactionTypeExpense:
+			// แปลงเป็น income/expense ต้องมี account_id ที่ใช้ได้ (ใหม่ หรือของเดิมที่ยัง compatible จากก่อนแปลง — มีแต่ income/expense เท่านั้นที่ใช้ account_id)
+			if input.AccountID == nil && tx.AccountID == nil {
+				return nil, domain.ErrAccountRequiredForConversion
+			}
+			// field ที่ไม่เข้ากับ income/expense ถูกเคลียร์อัตโนมัติ
+			tx.FromAccountID = nil
+			tx.ToAccountID = nil
+			// category_id เดิม (ถ้ามี) อาจเป็นของ type เก่า (income<->expense สลับกัน) เคลียร์ทิ้งเสมอเพื่อรักษา invariant ของ Ticket 03
+			// ถ้า client ส่ง category_id ใหม่มาพร้อมกันในคำขอเดียวกัน field application block ด้านล่างจะ set ค่าใหม่ทับให้เอง
+			tx.CategoryID = nil
+		}
+
+		tx.TransactionType = newType
+	}
+
 	// เอาช่อมูลชุดใหม่เช้าไป
 	if input.Amount != nil {
 		tx.Amount = *input.Amount

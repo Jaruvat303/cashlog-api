@@ -7,6 +7,7 @@ import (
 	"github.com/Jaruvat303/cashlog/internal/domain"
 	"github.com/Jaruvat303/cashlog/pkg/logger"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 type gormTransactionRepository struct {
@@ -49,13 +50,19 @@ func (g *gormTransactionRepository) GetByID(ctx context.Context, id uint) (*doma
 
 // update implements [domain.TransactionRepository].
 func (g *gormTransactionRepository) Update(ctx context.Context, tx *domain.Transaction) error {
-	err := g.db.WithContext(ctx).Save(tx).Error
+	// Omit(clause.Associations): tx.Category/Account/FromAccount/ToAccount อาจยังมีค่าเก่าค้างอยู่จากตอน GetByID Preload
+	// ถ้าไม่ Omit, GORM Save จะ sync FK (เช่น category_id) กลับจาก association struct ที่ preload ไว้ ทับค่าที่ Usecase เพิ่งเคลียร์เป็น nil (Ticket 04 type conversion)
+	err := g.db.WithContext(ctx).Omit(clause.Associations).Save(tx).Error
 	if err != nil {
 		return HandlerDBError(ctx, err, g.log)
 	}
 
+	// รีเซ็ต struct ทั้งก้อนก่อน reload ใหม่: ถ้าไม่รีเซ็ต ตอน category_id เป็น nil (เช่นหลังแปลงเป็น transfer)
+	// GORM Preload จะไม่มีอะไรให้ preload เลยปล่อย tx.Category ที่ preload ค้างมาจาก GetByID ไว้เหมือนเดิม ทำให้ response หลอกว่ายังมี category ติดอยู่
+	id := tx.ID
+	*tx = domain.Transaction{}
 	// สั่งโหลดข้อมูลใหม่ล่าสุดจาก DB พ่วง Category กลับมาส่งให้ชั้นนอก
-	err = g.db.WithContext(ctx).Preload("Category").First(tx, tx.ID).Error
+	err = g.db.WithContext(ctx).Preload("Category").First(tx, id).Error
 	if err != nil {
 		return HandlerDBError(ctx, err, g.log)
 	}

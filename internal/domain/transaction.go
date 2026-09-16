@@ -77,6 +77,7 @@ type TransactionUsecase interface {
 
 type UpdateTransactionParam struct {
 	Amount          *float64
+	TransactionType *string
 	Note            *string
 	CategoryID      *int64
 	AccountID       *int64
