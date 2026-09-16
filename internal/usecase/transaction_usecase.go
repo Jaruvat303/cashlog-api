@@ -17,8 +17,22 @@ type transactionUsecase struct {
 	cacheRepo        domain.CacheRepository
 	geminiRepo       domain.GeminiSlipRepository
 	accountRepo      domain.AccountRepo
+	categoryRepo     domain.CategoryRepo
 	ownerNameAliases []string
 	log              logger.Logger
+}
+
+// validateCategoryType เช็คว่า Category.Type ของ categoryID ตรงกับ transactionType ของธุรกรรมเอง
+// ใช้บังคับทั้งตอนสร้างและแก้ไขธุรกรรม เพื่อปิดช่องที่ category ผิดประเภทหลุดเข้ามาได้ (Ticket 03)
+func (t *transactionUsecase) validateCategoryType(ctx context.Context, categoryID int64, transactionType string) error {
+	category, err := t.categoryRepo.GetByID(ctx, uint(categoryID))
+	if err != nil {
+		return err
+	}
+	if category.Type != transactionType {
+		return domain.ErrCategoryTypeMismatch
+	}
+	return nil
 }
 
 // Delete implements [domain.TransactionUsecase].
@@ -90,6 +104,10 @@ func (t *transactionUsecase) UpdateTransaction(ctx context.Context, id uint, inp
 		// category_id ห้ามใช้กับธุรกรรม transfer (Decision #21)
 		if tx.TransactionType == domain.TransactionTypeTransfer {
 			return nil, domain.ErrCategoryNotAllowedForTransfer
+		}
+		// category_id ต้องมี Category.Type ตรงกับ transaction_type ของธุรกรรมเอง (Ticket 03)
+		if err := t.validateCategoryType(ctx, *input.CategoryID, tx.TransactionType); err != nil {
+			return nil, err
 		}
 		tx.CategoryID = input.CategoryID
 	}
@@ -346,6 +364,13 @@ func (t *transactionUsecase) CreateTransaction(ctx context.Context, input domain
 		return nil, domain.ErrAccountInactive
 	}
 
+	// category_id ต้องมี Category.Type ตรงกับ transaction_type ของธุรกรรมเอง (Ticket 03)
+	if input.CategoryID != nil {
+		if err := t.validateCategoryType(ctx, *input.CategoryID, input.TransactionType); err != nil {
+			return nil, err
+		}
+	}
+
 	txDate := timeutil.NowInBangkok()
 	if input.TransactionDate != nil {
 		txDate = *input.TransactionDate
@@ -544,6 +569,7 @@ func NewTransactionUsecase(txRepo domain.TransactionRepository,
 	cacheRepo domain.CacheRepository,
 	geminiRepo domain.GeminiSlipRepository,
 	accountRepo domain.AccountRepo,
+	categoryRepo domain.CategoryRepo,
 	ownerNameAliases []string,
 	log logger.Logger) domain.TransactionUsecase {
 	return &transactionUsecase{
@@ -551,6 +577,7 @@ func NewTransactionUsecase(txRepo domain.TransactionRepository,
 		cacheRepo:        cacheRepo,
 		geminiRepo:       geminiRepo,
 		accountRepo:      accountRepo,
+		categoryRepo:     categoryRepo,
 		ownerNameAliases: ownerNameAliases,
 		log:              log,
 	}
