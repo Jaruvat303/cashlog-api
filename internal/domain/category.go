@@ -31,11 +31,15 @@ type CategoryUsecase interface {
 }
 
 type CreateCategoryParam struct {
-	Name string
-	Type string
+	Name     string
+	Type     string
+	IconKey  string
+	ColorHex string
 }
 
 type UpdateCategoryParam struct {
-	Name string
-	Type string
+	Name     string
+	Type     string
+	IconKey  string
+	ColorHex string
 }

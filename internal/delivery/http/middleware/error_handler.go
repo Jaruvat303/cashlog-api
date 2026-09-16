@@ -77,6 +77,11 @@ func NewGlobalErrorHandler(appLogger logger.Logger) fiber.ErrorHandler {
 				errorCode = "ACCOUNT_REQUIRED_FOR_CONVERSION"
 				clientMessage = "Converting to income/expense requires a usable account_id (new or already compatible)."
 
+			case errors.Is(err, domain.ErrInvalidColorHex):
+				statusCode = fiber.StatusBadRequest
+				errorCode = "INVALID_COLOR_HEX"
+				clientMessage = "color_hex must be a '#' followed by 6 hex digits, e.g. #64748B."
+
 			// 404 Not Found
 			case errors.Is(err, domain.ErrNotFound):
 				statusCode = fiber.StatusNotFound

@@ -1031,6 +1031,14 @@ const docTemplate = `{
                 "type"
             ],
             "properties": {
+                "color_hex": {
+                    "type": "string",
+                    "example": "#FF0000"
+                },
+                "icon_key": {
+                    "type": "string",
+                    "example": "food"
+                },
                 "name": {
                     "type": "string",
                     "maxLength": 50,
@@ -1308,6 +1316,14 @@ const docTemplate = `{
         "github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto.UpdateCategoryInput": {
             "type": "object",
             "properties": {
+                "color_hex": {
+                    "type": "string",
+                    "example": "#FF0000"
+                },
+                "icon_key": {
+                    "type": "string",
+                    "example": "food"
+                },
                 "name": {
                     "type": "string",
                     "maxLength": 50,
@@ -1355,6 +1371,15 @@ const docTemplate = `{
                 "transaction_date": {
                     "type": "string",
                     "example": "2026-07-24T14:30:00+07:00"
+                },
+                "transaction_type": {
+                    "type": "string",
+                    "enum": [
+                        "income",
+                        "expense",
+                        "transfer"
+                    ],
+                    "example": "transfer"
                 }
             }
         },

@@ -97,6 +97,12 @@ definitions:
     type: object
   github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto.CreateCategoryInput:
     properties:
+      color_hex:
+        example: '#FF0000'
+        type: string
+      icon_key:
+        example: food
+        type: string
       name:
         example: อาหาร
         maxLength: 50
@@ -299,6 +305,12 @@ definitions:
     type: object
   github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto.UpdateCategoryInput:
     properties:
+      color_hex:
+        example: '#FF0000'
+        type: string
+      icon_key:
+        example: food
+        type: string
       name:
         example: อาหาร
         maxLength: 50
@@ -334,6 +346,13 @@ definitions:
         type: integer
       transaction_date:
         example: "2026-07-24T14:30:00+07:00"
+        type: string
+      transaction_type:
+        enum:
+        - income
+        - expense
+        - transfer
+        example: transfer
         type: string
     type: object
   ? github_com_Jaruvat303_cashlog_pkg_response.JsonResponse-array_github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto_AccountResponse
