@@ -18,4 +18,5 @@ var (
 	ErrAccountInactive               = errors.New("account_inactive")                  // อ้างอิง account ที่ is_active=false
 	ErrTransferSameAccount           = errors.New("transfer_same_account")             // from_account_id == to_account_id
 	ErrCategoryNotAllowedForTransfer = errors.New("category_not_allowed_for_transfer") // ส่ง category_id มาตอนสร้าง transfer
+	ErrCategoryTypeMismatch          = errors.New("category_type_mismatch")            // Category.Type ไม่ตรงกับ transaction_type
 )

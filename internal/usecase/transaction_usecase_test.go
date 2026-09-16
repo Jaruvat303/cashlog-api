@@ -101,7 +101,7 @@ func TestFetchTransactions(t *testing.T) {
 
 			tt.setupMock(mockRepo, mockCacheRepo)
 
-			txUsecase := usecase.NewTransactionUsecase(mockRepo, mockCacheRepo, mockGemini, nil, nil, mockLogger)
+			txUsecase := usecase.NewTransactionUsecase(mockRepo, mockCacheRepo, mockGemini, nil, nil, nil, mockLogger)
 
 			// Act
 			result, err := txUsecase.FetchTransactions(ctx, tt.input)
@@ -251,7 +251,7 @@ func TestGetDashboardSummary(t *testing.T) {
 
 			logger.InitLogger("development")
 			// นำ Mock ไปใส่ใน usecase
-			txUsecase := usecase.NewTransactionUsecase(mockRepo, mockCache, mockGemini, nil, nil, mockLogger)
+			txUsecase := usecase.NewTransactionUsecase(mockRepo, mockCache, mockGemini, nil, nil, nil, mockLogger)
 
 			// Act
 			result, err := txUsecase.GetDashboardSummary(ctx, tt.scope, tt.month, tt.year)
@@ -331,7 +331,7 @@ func TestDeleteTransaction(t *testing.T) {
 
 			ctx := context.Background()
 
-			uc := usecase.NewTransactionUsecase(mockRepo, mockCache, mockGemini, nil, nil, mockLogger)
+			uc := usecase.NewTransactionUsecase(mockRepo, mockCache, mockGemini, nil, nil, nil, mockLogger)
 
 			// Act
 			err := uc.DeleteTransaction(ctx, tt.id)
@@ -351,6 +351,95 @@ func TestDeleteTransaction(t *testing.T) {
 
 }
 
+func TestCreateTransaction(t *testing.T) {
+	mockActiveAccount := &domain.Account{
+		ID:       1,
+		Name:     "เงินสด",
+		IsActive: true,
+	}
+
+	tests := []struct {
+		name          string
+		input         domain.CreateTransactionParam
+		setupMock     func(repo *domain.TransactionRepositoryMock, cache *domain.TransactionCacheRepositoryMock, account *domain.AccountRepositoryMock, category *domain.CategoryRepositoryMock)
+		expectedError bool
+		expectedErrIs error
+	}{
+		{
+			name: "1. Success - category_id ตรงกับ transaction_type",
+			input: domain.CreateTransactionParam{
+				Amount:          100,
+				TransactionType: domain.TransactionTypeExpense,
+				AccountID:       1,
+				CategoryID:      pkg.PTR(int64(3)),
+			},
+			setupMock: func(repo *domain.TransactionRepositoryMock, cache *domain.TransactionCacheRepositoryMock, account *domain.AccountRepositoryMock, category *domain.CategoryRepositoryMock) {
+				account.On("GetByID", mock.Anything, uint(1)).Return(mockActiveAccount, nil)
+				category.On("GetByID", mock.Anything, uint(3)).Return(&domain.Category{ID: 3, Type: domain.TransactionTypeExpense}, nil)
+				repo.On("Insert", mock.Anything, mock.MatchedBy(func(tx *domain.Transaction) bool {
+					return tx.CategoryID != nil && *tx.CategoryID == 3
+				})).Return(nil)
+				cache.On("InvalidateCache", mock.Anything, mock.Anything).Return(nil)
+			},
+			expectedError: false,
+		},
+		{
+			name: "2. Rejected - category_id เป็นประเภท income แต่ transaction เป็น expense",
+			input: domain.CreateTransactionParam{
+				Amount:          100,
+				TransactionType: domain.TransactionTypeExpense,
+				AccountID:       1,
+				CategoryID:      pkg.PTR(int64(5)),
+			},
+			setupMock: func(repo *domain.TransactionRepositoryMock, cache *domain.TransactionCacheRepositoryMock, account *domain.AccountRepositoryMock, category *domain.CategoryRepositoryMock) {
+				account.On("GetByID", mock.Anything, uint(1)).Return(mockActiveAccount, nil)
+				category.On("GetByID", mock.Anything, uint(5)).Return(&domain.Category{ID: 5, Type: domain.TransactionTypeIncome}, nil)
+				// repo.Insert ต้องไม่ถูกเรียก เพราะ validation ต้อง reject ก่อนบันทึก
+			},
+			expectedError: true,
+			expectedErrIs: domain.ErrCategoryTypeMismatch,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			mockRepo := new(domain.TransactionRepositoryMock)
+			mockCache := new(domain.TransactionCacheRepositoryMock)
+			mockGemini := new(domain.GeminiSlipRepositoryMock)
+			mockAccount := new(domain.AccountRepositoryMock)
+			mockCategory := new(domain.CategoryRepositoryMock)
+			mockLogger := logger.NewNopLogger()
+
+			ctx := context.Background()
+
+			tt.setupMock(mockRepo, mockCache, mockAccount, mockCategory)
+
+			uc := usecase.NewTransactionUsecase(mockRepo, mockCache, mockGemini, mockAccount, mockCategory, nil, mockLogger)
+
+			// Act
+			result, err := uc.CreateTransaction(ctx, tt.input)
+
+			// Assert
+			if tt.expectedError {
+				assert.Nil(t, result)
+				assert.Error(t, err)
+				if tt.expectedErrIs != nil {
+					assert.ErrorIs(t, err, tt.expectedErrIs)
+				}
+			} else {
+				assert.NoError(t, err)
+				assert.NotNil(t, result)
+			}
+
+			mockRepo.AssertExpectations(t)
+			mockCache.AssertExpectations(t)
+			mockAccount.AssertExpectations(t)
+			mockCategory.AssertExpectations(t)
+		})
+	}
+}
+
 func TestUpdateTransaction(t *testing.T) {
 	// 1. กำหนดเวลาคงที่ (Fixed Time) ไว้ที่ด้านบนสุด
 	fixedTime := time.Date(2026, time.June, 19, 16, 0, 0, 0, time.Local)
@@ -361,15 +450,17 @@ func TestUpdateTransaction(t *testing.T) {
 		TransactionDate: pkg.PTR(fixedTime),
 	}
 	mockFetchTransaction := &domain.Transaction{
-		ID:         1,
-		Amount:     0,
-		Note:       "",
-		CategoryID: pkg.PTR(int64(1)),
+		ID:              1,
+		Amount:          0,
+		Note:            "",
+		TransactionType: domain.TransactionTypeExpense,
+		CategoryID:      pkg.PTR(int64(1)),
 	}
 
 	mockResult := &domain.Transaction{
 		ID:              1,
 		Amount:          200,
+		TransactionType: domain.TransactionTypeExpense,
 		CategoryID:      pkg.PTR(int64(3)),
 		Note:            "edit amount",
 		TransactionDate: fixedTime,
@@ -379,15 +470,16 @@ func TestUpdateTransaction(t *testing.T) {
 		name           string
 		id             uint
 		input          domain.UpdateTransactionParam
-		setupMock      func(repo *domain.TransactionRepositoryMock, cache *domain.TransactionCacheRepositoryMock)
+		setupMock      func(repo *domain.TransactionRepositoryMock, cache *domain.TransactionCacheRepositoryMock, category *domain.CategoryRepositoryMock)
 		expectedResult *domain.Transaction
 		expectedError  bool
+		expectedErrIs  error
 	}{
 		{
 			name:  "1. Database Failure - ไม่สามารถหาข้อมูล Transaction จาก ID ได้",
 			id:    uint(99),
 			input: mockInput,
-			setupMock: func(repo *domain.TransactionRepositoryMock, cache *domain.TransactionCacheRepositoryMock) {
+			setupMock: func(repo *domain.TransactionRepositoryMock, cache *domain.TransactionCacheRepositoryMock, category *domain.CategoryRepositoryMock) {
 				repo.On("GetByID", mock.Anything, uint(99)).Return(nil, domain.ErrNotFound)
 
 			},
@@ -398,8 +490,9 @@ func TestUpdateTransaction(t *testing.T) {
 			name:  "2. Sucess case - แก้ไขข้อมูลสำเร็จ",
 			id:    uint(1),
 			input: mockInput,
-			setupMock: func(repo *domain.TransactionRepositoryMock, cache *domain.TransactionCacheRepositoryMock) {
+			setupMock: func(repo *domain.TransactionRepositoryMock, cache *domain.TransactionCacheRepositoryMock, category *domain.CategoryRepositoryMock) {
 				repo.On("GetByID", mock.Anything, uint(1)).Return(mockFetchTransaction, nil)
+				category.On("GetByID", mock.Anything, uint(3)).Return(&domain.Category{ID: 3, Type: domain.TransactionTypeExpense}, nil)
 				repo.On("Update", mock.Anything, mock.MatchedBy(func(tx *domain.Transaction) bool {
 					return tx.ID == 1 &&
 						tx.Amount == 200 &&
@@ -417,13 +510,29 @@ func TestUpdateTransaction(t *testing.T) {
 			name:  "3. Datebase Error - ฐานข้อมูลมีปัญหาไม่สามารถระบุได้",
 			id:    uint(1),
 			input: mockInput,
-			setupMock: func(repo *domain.TransactionRepositoryMock, cache *domain.TransactionCacheRepositoryMock) {
+			setupMock: func(repo *domain.TransactionRepositoryMock, cache *domain.TransactionCacheRepositoryMock, category *domain.CategoryRepositoryMock) {
 				repo.On("GetByID", mock.Anything, uint(1)).Return(mockFetchTransaction, nil)
+				category.On("GetByID", mock.Anything, uint(3)).Return(&domain.Category{ID: 3, Type: domain.TransactionTypeExpense}, nil)
 				repo.On("Update", mock.Anything, mockFetchTransaction).Return(domain.ErrInternalDB)
 
 			},
 			expectedResult: nil,
 			expectedError:  true,
+		},
+		{
+			name: "4. Category Type Mismatch - category_id เป็นประเภท income แต่ transaction เป็น expense",
+			id:   uint(1),
+			input: domain.UpdateTransactionParam{
+				CategoryID: pkg.PTR(int64(5)),
+			},
+			setupMock: func(repo *domain.TransactionRepositoryMock, cache *domain.TransactionCacheRepositoryMock, category *domain.CategoryRepositoryMock) {
+				repo.On("GetByID", mock.Anything, uint(1)).Return(mockFetchTransaction, nil)
+				category.On("GetByID", mock.Anything, uint(5)).Return(&domain.Category{ID: 5, Type: domain.TransactionTypeIncome}, nil)
+				// repo.Update ต้องไม่ถูกเรียก เพราะ validation ต้อง reject ก่อนบันทึก
+			},
+			expectedResult: nil,
+			expectedError:  true,
+			expectedErrIs:  domain.ErrCategoryTypeMismatch,
 		},
 	}
 
@@ -433,13 +542,14 @@ func TestUpdateTransaction(t *testing.T) {
 			mockRepo := new(domain.TransactionRepositoryMock)
 			mockCache := new(domain.TransactionCacheRepositoryMock)
 			mockGemini := new(domain.GeminiSlipRepositoryMock)
+			mockCategory := new(domain.CategoryRepositoryMock)
 			mockLogger := logger.NewNopLogger()
 
 			ctx := context.Background()
 
-			tt.setupMock(mockRepo, mockCache)
+			tt.setupMock(mockRepo, mockCache, mockCategory)
 
-			uc := usecase.NewTransactionUsecase(mockRepo, mockCache, mockGemini, nil, nil, mockLogger)
+			uc := usecase.NewTransactionUsecase(mockRepo, mockCache, mockGemini, nil, mockCategory, nil, mockLogger)
 
 			// Act
 			result, err := uc.UpdateTransaction(ctx, tt.id, tt.input)
@@ -449,6 +559,9 @@ func TestUpdateTransaction(t *testing.T) {
 				assert.Nil(t, result)
 				assert.NotNil(t, err)
 				assert.Error(t, err)
+				if tt.expectedErrIs != nil {
+					assert.ErrorIs(t, err, tt.expectedErrIs)
+				}
 			} else {
 				assert.Nil(t, err)
 				assert.NotNil(t, result)
@@ -457,6 +570,7 @@ func TestUpdateTransaction(t *testing.T) {
 
 			mockRepo.AssertExpectations(t)
 			mockCache.AssertExpectations(t)
+			mockCategory.AssertExpectations(t)
 
 		})
 	}
@@ -617,7 +731,7 @@ func TestSyncTransaction(t *testing.T) {
 
 			tt.setupMock(mockRepo, mockCache, mockGemini, mockAccount)
 
-			txUsecase := usecase.NewTransactionUsecase(mockRepo, mockCache, mockGemini, mockAccount, nil, mockLogger)
+			txUsecase := usecase.NewTransactionUsecase(mockRepo, mockCache, mockGemini, mockAccount, nil, nil, mockLogger)
 
 			// Act
 			result, err := txUsecase.SyncTransaction(ctx, tt.imageBytes, tt.localImageName)
