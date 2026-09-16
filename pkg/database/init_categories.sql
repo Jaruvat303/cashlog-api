@@ -1,16 +1,5 @@
 -- คำสั่งสำหรับเติมข้อมูลประเภทรายรับ-รายจ่ายเริ่มต้น (Master Data) ทั้งหมด 43 รายการ
 
--- Rename แถวเดิมก่อน (one-time migration สำหรับฐานข้อมูลที่ยังมีชื่อเก่าอยู่)
--- ต้องรันก่อน INSERT ด้านล่างเสมอ เพื่อให้ ON CONFLICT (name) จับคู่แถวเดิมถูกต้อง
--- (คง id เดิมไว้ ไม่ insert ซ้ำ) — ถ้าไม่มีแถวชื่อเก่าอยู่แล้ว คำสั่งนี้จะไม่ทำอะไรเลย
-UPDATE categories SET name = 'เงินบริจาคและทำบุญ', updated_at = CURRENT_TIMESTAMP WHERE name = 'เงินบริการและทำบุญ';
-UPDATE categories SET name = 'วัตถุดิบเข้าบ้าน', updated_at = CURRENT_TIMESTAMP WHERE name = 'ค่าของชำและวัตถุดิบเข้าบ้าน';
-UPDATE categories SET name = 'เดินทางและขนส่งสาธารณะ', updated_at = CURRENT_TIMESTAMP WHERE name = 'ค่าเดินทางและขนส่งสาธารณะ';
-UPDATE categories SET name = 'น้ำมันและดูแลรักษารถ', updated_at = CURRENT_TIMESTAMP WHERE name = 'ค่าน้ำมันและดูแลรักษารถ';
-UPDATE categories SET name = 'ที่อยู่อาศัย (ค่าเช่า/ผ่อนบ้าน)', updated_at = CURRENT_TIMESTAMP WHERE name = 'ค่าที่อยู่อาศัย (ค่าเช่า/ผ่อนบ้าน)';
-UPDATE categories SET name = 'อินเทอร์เน็ตและโทรศัพท์', updated_at = CURRENT_TIMESTAMP WHERE name = 'ค่าอินเทอร์เน็ตและโทรศัพท์';
-UPDATE categories SET name = 'ปาร์ตี้และสังสรรค์', updated_at = CURRENT_TIMESTAMP WHERE name = 'สังสรรค์และปาร์ตี้';
-
 INSERT INTO categories (name, type, icon_key, color_hex, created_at, updated_at) VALUES
 -- ==========================================
 -- หน้าจอรายจ่าย (Expense) - 29 รายการ
