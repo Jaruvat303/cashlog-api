@@ -23,20 +23,24 @@ func TestSeedCategories_RenameIsIdempotent(t *testing.T) {
 	log := logger.NewNopLogger()
 
 	// จำลองฐานข้อมูลจริงที่ยังมีชื่อ category เดิม (ก่อน rename ทั้ง 7 รายการ) อยู่ก่อนรัน migration นี้
-	oldNames := []string{
-		"เงินบริการและทำบุญ",
-		"ค่าของชำและวัตถุดิบเข้าบ้าน",
-		"ค่าเดินทางและขนส่งสาธารณะ",
-		"ค่าน้ำมันและดูแลรักษารถ",
-		"ค่าที่อยู่อาศัย (ค่าเช่า/ผ่อนบ้าน)",
-		"ค่าอินเทอร์เน็ตและโทรศัพท์",
-		"สังสรรค์และปาร์ตี้",
+	// key = ชื่อเก่า, value = ชื่อใหม่ที่ init_categories.sql ต้อง rename ไปให้ถูกต้อง
+	renames := map[string]string{
+		"เงินบริการและทำบุญ":                 "เงินบริจาคและทำบุญ",
+		"ค่าของชำและวัตถุดิบเข้าบ้าน":        "วัตถุดิบเข้าบ้าน",
+		"ค่าเดินทางและขนส่งสาธารณะ":          "เดินทางและขนส่งสาธารณะ",
+		"ค่าน้ำมันและดูแลรักษารถ":            "น้ำมันและดูแลรักษารถ",
+		"ค่าที่อยู่อาศัย (ค่าเช่า/ผ่อนบ้าน)": "ที่อยู่อาศัย (ค่าเช่า/ผ่อนบ้าน)",
+		"ค่าอินเทอร์เน็ตและโทรศัพท์":         "อินเทอร์เน็ตและโทรศัพท์",
+		"สังสรรค์และปาร์ตี้":                 "ปาร์ตี้และสังสรรค์",
 	}
-	oldIDs := make(map[string]int64, len(oldNames))
-	for _, name := range oldNames {
-		cat := &domain.Category{Name: name, Type: domain.TransactionTypeExpense, IconKey: "old-icon", ColorHex: "#000000"}
+
+	oldNames := make([]string, 0, len(renames))
+	oldIDs := make(map[string]int64, len(renames))
+	for oldName := range renames {
+		cat := &domain.Category{Name: oldName, Type: domain.TransactionTypeExpense, IconKey: "old-icon", ColorHex: "#000000"}
 		require.NoError(t, db.Create(cat).Error)
-		oldIDs[name] = cat.ID
+		oldNames = append(oldNames, oldName)
+		oldIDs[oldName] = cat.ID
 	}
 
 	// รอบที่ 1
@@ -68,8 +72,10 @@ func TestSeedCategories_RenameIsIdempotent(t *testing.T) {
 		seen[n] = true
 	}
 
-	// id เดิมของแถวที่ rename ต้องยังเป็น id เดิม (พิสูจน์ว่าเป็นการ UPDATE ในที่เดิม ไม่ใช่ insert แถวใหม่)
-	var renamed domain.Category
-	require.NoError(t, db.Where("name = ?", "เงินบริจาคและทำบุญ").First(&renamed).Error)
-	assert.Equal(t, oldIDs["เงินบริการและทำบุญ"], renamed.ID, "id ต้องคงเดิมหลัง rename ไม่ใช่แถวใหม่")
+	// id เดิมของแถวที่ rename ต้องยังเป็น id เดิมสำหรับทั้ง 7 รายการ (พิสูจน์ว่าเป็นการ UPDATE ในที่เดิม ไม่ใช่ insert แถวใหม่)
+	for oldName, newName := range renames {
+		var renamed domain.Category
+		require.NoError(t, db.Where("name = ?", newName).First(&renamed).Error, "ต้องเจอแถวชื่อใหม่ %q หลัง seed", newName)
+		assert.Equal(t, oldIDs[oldName], renamed.ID, "id ของ %q -> %q ต้องคงเดิมหลัง rename ไม่ใช่แถวใหม่", oldName, newName)
+	}
 }
