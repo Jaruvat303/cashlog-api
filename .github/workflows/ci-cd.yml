@@ -109,7 +109,6 @@ jobs:
             DB_CONN_MAX_LIFETIME=30
             GOOGLE_CLOUD_PROJECT=cashlog-api
             MODEL_NAME=gemini-3.5-flash-lite
-            OWNER_NAME_ALIASES=["จารุวัฒน์","สีหิน","Jaruvat","Seehin"]
 
           # สลับชื่อกุญแจในการไขความลับบน GCP ตามค่าที่แมปไว้ใน GitHub Secrets ของแต่ละฝั่ง
           secrets: |
