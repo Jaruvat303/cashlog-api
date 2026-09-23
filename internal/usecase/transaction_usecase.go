@@ -299,21 +299,26 @@ func (t *transactionUsecase) GetDashboardSummary(ctx context.Context, scope stri
 		// ให้หันไปใช้ Logger ตัวที่สืบทอดมาจาก Constructor แทน ป้องกันแอปพัง (Panic)
 		log = t.log
 	}
-	var startDate, endDate time.Time
 	var periodKey string
+	var rangeStart, rangeEnd time.Time
 
 	if scope == "yearly" {
 		// เรื่มวันที่ 1 jan - 31 Dec
-		startDate = time.Date(year, time.January, 1, 0, 0, 0, 0, timeutil.BangKokLoc)
-		endDate = startDate.AddDate(1, 0, 0).Add(-time.Nanosecond)
+		rangeStart, rangeEnd = timeutil.YearRangeBangkok(year)
 		periodKey = fmt.Sprintf("summary:year:%d", year) // ผลลัพธ์ เช่น summary:yearly:2026
 	} else {
 		// เริ่มวันที่ 1 ของทุกเดือน
 		scope = "monthly"
-		startDate = time.Date(year, time.Month(month), 1, 0, 0, 0, 0, timeutil.BangKokLoc)
-		endDate = startDate.AddDate(0, 1, 0).Add(-time.Nanosecond)
+		// month มาจาก handler ซึ่ง validate ช่วง 1-12 แล้วก่อนถึงจุดนี้
+		rangeStart, rangeEnd = timeutil.MonthRangeBangkok(year, month)
 		periodKey = fmt.Sprintf("summary:monthly:%d-%02d", year, month) // ผลลัพธ์ เช่น summary:monthly:2026-06
 	}
+
+	// CalculateSummary ยังใช้ BETWEEN แบบ inclusive ทั้งสองด้าน จึงต้องแปลงขอบเขต
+	// half-open [rangeStart, rangeEnd) ของ helper ให้เป็นขอบเขต inclusive ด้วยการ
+	// ลบ 1 nanosecond จาก rangeEnd ก่อนส่งเข้า repository
+	startDate := rangeStart
+	endDate := rangeEnd.Add(-time.Nanosecond)
 
 	// หาข้อมูล cashe เก่าจาก Redis
 	cashedData, err := t.cacheRepo.GetCache(ctx, periodKey)
