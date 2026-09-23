@@ -35,7 +35,7 @@ type Transaction struct {
 	ToAccount       *Account  `gorm:"foreignKey:ToAccountID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT;"`
 	Source          string    `gorm:"type:varchar(20)"` // slip, manual
 	LocalImageName  string    `gorm:"type:varchar(255)"`
-	TransactionDate time.Time `gorm:"not null"`
+	TransactionDate time.Time `gorm:"not null;index:idx_transactions_transaction_date"`
 	CreatedAt       time.Time `gorm:"autoCreateTime;not null"`
 	UpdatedAt       time.Time `gorm:"autoUpdateTime;not null"`
 }
