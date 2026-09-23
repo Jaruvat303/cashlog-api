@@ -199,6 +199,38 @@ func (h *TransactionHandler) GetDashboardSummary(c *fiber.Ctx) error {
 	return response.Success(c, fiber.StatusOK, "Dashboard summary fetched successfully", dtoSummary)
 }
 
+// GetTrend ตอบกลับชุดข้อมูลรายรับ-รายจ่ายสำหรับวาดกราฟแท่ง แบบรายเดือน (12 เดือนของปีที่ระบุ)
+// หรือรายปี (ปีแรกที่มีรายการถึงปีปัจจุบัน สูงสุด 10 ปี)
+// @Summary ดึงข้อมูลแนวโน้มรายรับ-รายจ่ายสำหรับกราฟแท่ง
+// @Description ดึงชุด bucket รายรับ-รายจ่ายพร้อมวาดกราฟแท่งทันที รองรับ granularity=month (12 bucket ของปีที่ระบุ ครบเสมอ) หรือ granularity=year (1 bucket ต่อปี ตั้งแต่ปีแรกที่มีรายการถึงปีปัจจุบัน สูงสุด 10 ปี) transfer ไม่ถูกนับรวมในยอด
+// @Tags Transaction
+// @Accept json
+// @Produce json
+// @Param granularity query string false "ระดับการรวมข้อมูล" Enums(month, year) default(month)
+// @Param year query int false "ปีที่ต้องการดึงข้อมูล (ใช้เฉพาะ granularity=month, ต้องอยู่ระหว่าง 2000 ถึงปีปัจจุบัน+1)" default(current year)
+// @Success 200 {object} response.JsonResponse[dto.TrendResponse] "Trend data fetched successfully"
+// @Failure 400 {object} dto.ErrorResponseDTO "Bad Request  <br>error_code: INVALID_INPUT_PARAMETERS <br>message: invalid input parameters: granularity must be 'month' or 'year' / year must be between 2000 and <current+1>"
+// @Failure 499 {object} dto.ErrorResponseDTO "Client Closed Request  <br>error_code: REQUEST_CANCELED <br>message: The request was canceled by the user"
+// @Failure 500 {object} dto.ErrorResponseDTO "Internal Server Error <br>error_code: INTERNAL_SERVER_ERROR or INTERNAL_DATABASE_ERROR <br>message: Something went wrong, please try again later"
+// @Failure 504 {object} dto.ErrorResponseDTO "Gateway Timeout <br>error_code: DATABASE_TIMEOUT <br>message: The database operation timed out, please try again"
+// @Router /transactions/trend [get]
+func (h *TransactionHandler) GetTrend(c *fiber.Ctx) error {
+	ctx := c.UserContext()
+
+	// ส่งค่าดิบไปให้ Usecase ตัดสินใจเรื่อง default/validate เอง (0/"" = client ไม่ได้ส่งมา)
+	granularity := c.Query("granularity", "")
+	year := c.QueryInt("year", 0)
+
+	result, err := h.txUsecase.GetTrend(ctx, granularity, year)
+	if err != nil {
+		return err
+	}
+
+	dtoResult := dto.MapToTrendResponse(result)
+
+	return response.Success(c, fiber.StatusOK, "Trend data fetched successfully", dtoResult)
+}
+
 // GetMonthlyHistory สำหรับดึงข้อมูล Transaction ตามเวลาที่กำหนด
 // @Summary ดึงข้อมูล Transaction ตามเวลาที่กำหนด
 // @Description ดึงข้อมูล Transaction ตามเวลาที่กำหนด โดยสามารถระบุปี เดือน และการแบ่งหน้า (Pagination) ได้ผ่าน Query Parameters

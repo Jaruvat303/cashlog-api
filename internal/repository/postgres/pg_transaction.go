@@ -159,6 +159,53 @@ func (g *gormTransactionRepository) CalculateSummary(ctx context.Context, startD
 	return summary, nil
 }
 
+// AggregateMonthly implements [domain.TransactionRepository]. รวมยอดรายรับ-รายจ่ายแบบ group รายเดือน
+// ตามเวลา Asia/Bangkok ภายในขอบเขต [from, to) — filter บน transaction_date เป็น sargable range
+// (>= AND <) ตรงๆ เพื่อให้ idx_transactions_transaction_date ทำงาน (Ticket B2)
+// ใช้ .Model(&domain.Transaction{}) แทนการ hardcode ชื่อตาราง เพื่อให้ table name resolve ถูกเสมอ
+// (dev/prod แยกกันด้วย search_path บน DSN ไม่ใช่ GORM TablePrefix แต่กัน regression ไว้ก่อน)
+func (g *gormTransactionRepository) AggregateMonthly(ctx context.Context, from, to time.Time) ([]domain.MonthlyAggregate, error) {
+	var result []domain.MonthlyAggregate
+
+	err := g.db.WithContext(ctx).
+		Model(&domain.Transaction{}).
+		Select(`
+		EXTRACT(YEAR FROM date_trunc('month', transaction_date AT TIME ZONE 'Asia/Bangkok'))::int AS year,
+		EXTRACT(MONTH FROM date_trunc('month', transaction_date AT TIME ZONE 'Asia/Bangkok'))::int AS month,
+		SUM(CASE WHEN transaction_type = ? THEN amount ELSE 0 END) AS total_income,
+		SUM(CASE WHEN transaction_type = ? THEN amount ELSE 0 END) AS total_expense
+		`, domain.TransactionTypeIncome, domain.TransactionTypeExpense).
+		Where("transaction_date >= ? AND transaction_date < ?", from, to).
+		Group("1, 2").
+		Order("1, 2").
+		Scan(&result).Error
+
+	if err != nil {
+		return nil, HandlerDBError(ctx, err, g.log)
+	}
+	return result, nil
+}
+
+// GetFirstTransactionYear implements [domain.TransactionRepository]. คืนปี (Asia/Bangkok) ของธุรกรรม
+// ที่เก่าที่สุดในระบบ โดยห่อ MIN(transaction_date) ด้วย AT TIME ZONE ก่อนตัดปี เพื่อให้ Postgres ยังใช้
+// idx_transactions_transaction_date ทำ index scan ของ MIN ได้ (Ticket B2)
+func (g *gormTransactionRepository) GetFirstTransactionYear(ctx context.Context) (int, bool, error) {
+	var year *int
+
+	err := g.db.WithContext(ctx).
+		Model(&domain.Transaction{}).
+		Select("EXTRACT(YEAR FROM (MIN(transaction_date) AT TIME ZONE 'Asia/Bangkok'))::int").
+		Scan(&year).Error
+
+	if err != nil {
+		return 0, false, HandlerDBError(ctx, err, g.log)
+	}
+	if year == nil {
+		return 0, false, nil
+	}
+	return *year, true, nil
+}
+
 // FetchByTimeRange implements [domain.TransactionRepository].
 func (g *gormTransactionRepository) FetchByTimeRange(ctx context.Context, param domain.QueryTransactionParam) ([]domain.Transaction, error) {
 	var txs []domain.Transaction

@@ -715,6 +715,72 @@ const docTemplate = `{
                 }
             }
         },
+        "/transactions/trend": {
+            "get": {
+                "description": "ดึงชุด bucket รายรับ-รายจ่ายพร้อมวาดกราฟแท่งทันที รองรับ granularity=month (12 bucket ของปีที่ระบุ ครบเสมอ) หรือ granularity=year (1 bucket ต่อปี ตั้งแต่ปีแรกที่มีรายการถึงปีปัจจุบัน สูงสุด 10 ปี) transfer ไม่ถูกนับรวมในยอด",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Transaction"
+                ],
+                "summary": "ดึงข้อมูลแนวโน้มรายรับ-รายจ่ายสำหรับกราฟแท่ง",
+                "parameters": [
+                    {
+                        "enum": [
+                            "month",
+                            "year"
+                        ],
+                        "type": "string",
+                        "default": "month",
+                        "description": "ระดับการรวมข้อมูล",
+                        "name": "granularity",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "ปีที่ต้องการดึงข้อมูล (ใช้เฉพาะ granularity=month, ต้องอยู่ระหว่าง 2000 ถึงปีปัจจุบัน+1)",
+                        "name": "year",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Trend data fetched successfully",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Jaruvat303_cashlog_pkg_response.JsonResponse-github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto_TrendResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request  \u003cbr\u003eerror_code: INVALID_INPUT_PARAMETERS \u003cbr\u003emessage: invalid input parameters: granularity must be 'month' or 'year' / year must be between 2000 and \u003ccurrent+1\u003e",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto.ErrorResponseDTO"
+                        }
+                    },
+                    "499": {
+                        "description": "Client Closed Request  \u003cbr\u003eerror_code: REQUEST_CANCELED \u003cbr\u003emessage: The request was canceled by the user",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto.ErrorResponseDTO"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error \u003cbr\u003eerror_code: INTERNAL_SERVER_ERROR or INTERNAL_DATABASE_ERROR \u003cbr\u003emessage: Something went wrong, please try again later",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto.ErrorResponseDTO"
+                        }
+                    },
+                    "504": {
+                        "description": "Gateway Timeout \u003cbr\u003eerror_code: DATABASE_TIMEOUT \u003cbr\u003emessage: The database operation timed out, please try again",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto.ErrorResponseDTO"
+                        }
+                    }
+                }
+            }
+        },
         "/transactions/upload-slip": {
             "post": {
                 "description": "อัปโหลดสลิปและบันทึก Transaction โดยต้องแนบไฟล์สลิปและระบุชื่อไฟล์ต้นฉบับ",
@@ -1270,6 +1336,43 @@ const docTemplate = `{
                 }
             }
         },
+        "github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto.TrendBucketDTO": {
+            "type": "object",
+            "properties": {
+                "month": {
+                    "type": "integer"
+                },
+                "net": {
+                    "type": "number"
+                },
+                "total_expense": {
+                    "type": "number"
+                },
+                "total_income": {
+                    "type": "number"
+                },
+                "year": {
+                    "type": "integer"
+                }
+            }
+        },
+        "github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto.TrendResponse": {
+            "type": "object",
+            "properties": {
+                "buckets": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto.TrendBucketDTO"
+                    }
+                },
+                "granularity": {
+                    "type": "string"
+                },
+                "year": {
+                    "type": "integer"
+                }
+            }
+        },
         "github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto.UpdateAccountInput": {
             "type": "object",
             "required": [
@@ -1484,6 +1587,21 @@ const docTemplate = `{
             "properties": {
                 "data": {
                     "$ref": "#/definitions/github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto.TransactionResponse"
+                },
+                "message": {
+                    "type": "string"
+                },
+                "success": {
+                    "type": "boolean",
+                    "example": true
+                }
+            }
+        },
+        "github_com_Jaruvat303_cashlog_pkg_response.JsonResponse-github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto_TrendResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/github_com_Jaruvat303_cashlog_internal_delivery_http_v1_dto.TrendResponse"
                 },
                 "message": {
                     "type": "string"

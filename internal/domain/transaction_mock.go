@@ -52,6 +52,14 @@ func (m *TransactionUsecaseMock) GetDashboardSummary(ctx context.Context, scope 
 	return args.Get(0).(*DashboardSummary), args.Error(1)
 }
 
+func (m *TransactionUsecaseMock) GetTrend(ctx context.Context, granularity string, year int) (*TrendResult, error) {
+	args := m.Called(ctx, granularity, year)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*TrendResult), args.Error(1)
+}
+
 func (m *TransactionUsecaseMock) UpdateTransaction(ctx context.Context, id uint, input UpdateTransactionParam) (*Transaction, error) {
 	args := m.Called(ctx, id, input)
 	if args.Get(0) == nil {
@@ -119,6 +127,19 @@ func (m *TransactionRepositoryMock) GetByID(ctx context.Context, id uint) (*Tran
 func (m *TransactionRepositoryMock) CountByTimeRange(ctx context.Context, startDate, endDate time.Time) (int64, error) {
 	args := m.Called(ctx, startDate, endDate)
 	return args.Get(0).(int64), args.Error(1)
+}
+
+func (m *TransactionRepositoryMock) AggregateMonthly(ctx context.Context, from, to time.Time) ([]MonthlyAggregate, error) {
+	args := m.Called(ctx, from, to)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).([]MonthlyAggregate), args.Error(1)
+}
+
+func (m *TransactionRepositoryMock) GetFirstTransactionYear(ctx context.Context) (int, bool, error) {
+	args := m.Called(ctx)
+	return args.Int(0), args.Bool(1), args.Error(2)
 }
 
 // TransactionCacheRepositoryMock stuct สำหรับจำลอง function ใน Redis Cache
