@@ -48,6 +48,15 @@ type TransactionRepository interface {
 	Delete(ctx context.Context, id uint) error
 	GetByID(ctx context.Context, id uint) (*Transaction, error)
 	CountByTimeRange(ctx context.Context, startDate, endDate time.Time) (int64, error)
+
+	// AggregateMonthly รวมยอดรายรับ-รายจ่ายแบบ group รายเดือนตามเวลา Asia/Bangkok ภายในขอบเขต [from, to)
+	// from/to ต้องเป็น sargable range (half-open) เพื่อให้ index บน transaction_date ทำงาน
+	// เสมอ group เป็นรายเดือน — UseCase เป็นคน roll up ขึ้นเป็นรายปีเองสำหรับ granularity=year (Ticket B2)
+	AggregateMonthly(ctx context.Context, from, to time.Time) ([]MonthlyAggregate, error)
+
+	// GetFirstTransactionYear คืนปี (ตามเวลา Asia/Bangkok) ของธุรกรรมที่เก่าที่สุดในระบบ
+	// hasData=false เมื่อตาราง transactions ยังไม่มีข้อมูลเลย
+	GetFirstTransactionYear(ctx context.Context) (year int, hasData bool, err error)
 }
 
 // CacheRepository
@@ -71,6 +80,8 @@ type TransactionUsecase interface {
 	CreateTransfer(ctx context.Context, input CreateTransferParam) (*Transaction, error)
 	FetchTransactions(ctx context.Context, input FetchTransactionInput) (*FetchTransactionResult, error)
 	GetDashboardSummary(ctx context.Context, scope string, month, year int) (*DashboardSummary, error)
+	// GetTrend คืนชุด bucket รายรับ-รายจ่ายพร้อมวาดกราฟแท่ง (Ticket B2)
+	GetTrend(ctx context.Context, granularity string, year int) (*TrendResult, error)
 	UpdateTransaction(ctx context.Context, id uint, input UpdateTransactionParam) (*Transaction, error)
 	DeleteTransaction(ctx context.Context, id uint) error
 }

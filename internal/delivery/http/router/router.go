@@ -51,6 +51,7 @@ func SetupRoutes(app *fiber.App,
 	tx := v1.Group("/transactions")
 	tx.Get("/", txHandler.GetMonthlyHistory)
 	tx.Get("/summary", txHandler.GetDashboardSummary)
+	tx.Get("/trend", txHandler.GetTrend)
 	tx.Post("/", txHandler.CreateTransaction)
 	tx.Post("/transfer", txHandler.CreateTransfer)
 	tx.Post("/upload-slip", slipRateLimiter, txHandler.UplaodSlipAndLog)
